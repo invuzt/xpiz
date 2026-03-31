@@ -10,6 +10,7 @@ import android.content.pm.PackageManager;
 import android.hardware.camera2.*;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.util.Size;
+import android.util.Log; // KTP LOG DI SINI MAS!
 import android.content.ContentValues;
 import android.provider.MediaStore;
 import android.net.Uri;
@@ -88,28 +89,23 @@ public class MainActivity extends Activity {
     }
 
     private void takePicture() {
-        // 1. Ambil Bitmap dari TextureView (Bisa jadi format HARDWARE)
         Bitmap rawBmp = textureView.getBitmap();
         if (rawBmp == null) return;
 
-        // 2. PAKSA KONVERSI KE SOFTWARE MEMORY (ARGB_8888)
-        // Ini kunci agar Rust & Galeri tidak dapet data hitam/kosong
+        // Paksa turun ke RAM biar Rust & Galeri bisa baca
         Bitmap softwareBmp = rawBmp.copy(Bitmap.Config.ARGB_8888, false);
-        rawBmp.recycle(); // Buang yang hardware
+        rawBmp.recycle();
 
         backgroundHandler.post(() -> {
             try {
-                // 3. Kirim data asli ke Rust
                 ByteBuffer buffer = ByteBuffer.allocate(softwareBmp.getByteCount());
                 softwareBmp.copyPixelsToBuffer(buffer);
                 String report = analyzeFrame(buffer.array(), softwareBmp.getWidth(), softwareBmp.getHeight());
                 
                 runOnUiThread(() -> Toast.makeText(this, report, Toast.LENGTH_SHORT).show());
-                
-                // 4. Simpan ke Galeri
                 saveToGallery(softwareBmp);
-            } finally {
-                // softwareBmp.recycle(); // Opsional, biarkan GC yang urus jika sering crash
+            } catch (Exception e) {
+                Log.e("xpiz", "Error jepret: " + e.getMessage());
             }
         });
     }
