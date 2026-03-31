@@ -1,14 +1,10 @@
 [package]
-name = "xpiz_core"
+name = "rust_logic"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
-name = "xpiz_core"
-crate-type = ["staticlib", "cdylib"]
+crate-type = ["cdylib"]
 
 [dependencies]
-jni = "0.21.1"
-# Kita ganti fiturnya agar sesuai dengan versi 0.7.0
-ndk = { version = "0.7.0", features = ["media", "jni"] }
-ndk-sys = "0.4.0"
+jni = { version = "0.21.1" }
