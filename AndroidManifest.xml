@@ -2,12 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.invuzt.xpiz">
 
-    <application 
-        android:label="Cakru" 
-        android:hasCode="true">
-        
+    <application
+        android:label="xpiz Mobile"
+        android:hasCode="true"
+        android:allowBackup="true">
+
         <activity
-            android:name="com.invuzt.xpiz.MainActivity"
+            android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

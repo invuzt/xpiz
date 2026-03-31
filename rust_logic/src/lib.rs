@@ -1,11 +1,16 @@
-use std::ffi::CString;
-use std::os::raw::c_char;
+use jni::JNIEnv;
+use jni::objects::{JClass};
+use jni::sys::jstring;
 
 #[no_mangle]
-pub extern "C" fn get_hello_rust() -> *mut c_char {
-    // Teks yang ingin dikirim ke Android
-    let s = CString::new("Hello World dari Rust! 🦀\nBerhasil Terhubung!").unwrap();
+pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_stringFromRust(
+    mut env: JNIEnv,
+    _class: JClass,
+) -> jstring {
+    // Teks khas xpiz!
+    let output = env.new_string("Hello dari xpiz! 🦀\nBerhasil Terhubung via JNI!")
+        .expect("Gagal buat string!");
     
-    // Kirim ke C sebagai pointer
-    s.into_raw()
+    output.into_raw()
 }
+
