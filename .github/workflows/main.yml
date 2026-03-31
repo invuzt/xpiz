@@ -16,12 +16,12 @@ jobs:
       - name: Build Rust Logic
         run: |
           cd rust_logic
+          # Cari lokasi NDK secara presisi
           NDK_PATH=$(ls -d $ANDROID_SDK_ROOT/ndk/* | tail -1)
-          export TOOLCHAIN=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64
-          export PATH=$TOOLCHAIN/bin:$PATH
+          CLANG_PATH=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
           
-          # Gunakan target spesifik tanpa angka API di nama linker agar lebih stabil
-          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android-clang \
+          # Paksa Cargo pakai Full Path Linker agar tidak ada alasan 'Not Found'
+          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$CLANG_PATH \
           cargo build --target aarch64-linux-android --release
           
           mkdir -p ../jni
