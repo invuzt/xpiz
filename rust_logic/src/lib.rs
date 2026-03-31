@@ -1,28 +1,33 @@
 use jni::JNIEnv;
 use jni::objects::{JClass, JString};
 use jni::sys::{jint, jstring};
-use std::collections::HashMap;
+
+// Di sini kita pakai simulasi 'Counter' sederhana
+// Di project beneran, Mas bisa pakai SQLite agar datanya tidak hilang saat HP mati
+static mut KOPI_COUNT: i32 = 0;
+static mut SABUN_COUNT: i32 = 0;
 
 #[no_mangle]
 pub extern "system" fn Java_com_invuzt_xpiz_MainActivity_predictBestButton(
     mut env: JNIEnv,
     _class: JClass,
-    click_history: jint, // Simulasi ID tombol yang baru diklik
+    id_tombol: jint,
 ) -> jstring {
-    // Di dunia nyata, data ini disimpan di database (SQLite)
-    // Untuk demo Odfiz, kita simpan daftar menu favorit
-    let menus = vec!["KOPI", "SABUN", "SAMPEL", "STOK"];
-    
-    // Logika AI Sederhana: Menebak berdasarkan ID atau urutan
-    // Disini kita buat simulasi 'Smart Suggestion'
-    let suggested = match click_history {
-        1 => "SABUN (Sering dibeli bareng)",
-        2 => "KOPI (Pas buat istirahat)",
-        3 => "LAPORAN (Cek hasil kerja)",
-        _ => "MENU UTAMA",
-    };
+    unsafe {
+        // AI Menambah hitungan berdasarkan klik asli user
+        if id_tombol == 1 { KOPI_COUNT += 1; }
+        else if id_tombol == 2 { SABUN_COUNT += 1; }
 
-    let hasil = format!("🤖 Odfiz Suggestion: {}", suggested);
-    let output = env.new_string(hasil).expect("Gagal buat string");
-    output.into_raw()
+        // AI Menentukan siapa pemenangnya
+        let pemenang = if KOPI_COUNT > SABUN_COUNT {
+            format!("🔥 Rekomendasi: KOPI (Diklik {}x)", KOPI_COUNT)
+        } else if SABUN_COUNT > KOPI_COUNT {
+            format!("🔥 Rekomendasi: SABUN (Diklik {}x)", SABUN_COUNT)
+        } else {
+            "📊 AI sedang mempelajari pola klik Mas...".to_string()
+        };
+
+        let output = env.new_string(pemenang).expect("Gagal");
+        output.into_raw()
+    }
 }
