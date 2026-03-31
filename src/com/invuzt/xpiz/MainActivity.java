@@ -8,9 +8,10 @@ import android.graphics.*;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.hardware.camera2.*;
-import android.hardware.camera2.params.StreamConfigurationMap;
+import android.util.Log;
 import android.util.Size;
-import android.util.Log; // KTP LOG DI SINI MAS!
+import android.media.ImageReader;
+import android.media.Image;
 import android.content.ContentValues;
 import android.provider.MediaStore;
 import android.net.Uri;
@@ -20,13 +21,12 @@ import java.util.Arrays;
 
 public class MainActivity extends Activity {
     static { System.loadLibrary("hello"); }
-    private native String analyzeFrame(byte[] data, int width, int height);
+    private native String analyzeFrame(String path, int w, int h);
 
     private CameraDevice cameraDevice;
     private CameraCaptureSession cameraSession;
-    private CaptureRequest.Builder previewBuilder;
     private TextureView textureView;
-    private Size previewSize;
+    private ImageReader imageReader;
     private Handler backgroundHandler;
     private HandlerThread backgroundThread;
 
@@ -34,6 +34,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         startBackgroundThread();
+        
         FrameLayout root = new FrameLayout(this);
         textureView = new TextureView(this);
         root.addView(textureView);
@@ -43,25 +44,29 @@ public class MainActivity extends Activity {
         btn.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
         btn.bottomMargin = 80;
         shutter.setLayoutParams(btn);
-        shutter.setBackgroundColor(Color.WHITE);
+        shutter.setBackgroundColor(Color.parseColor("#80FFFFFF")); // Transparan dikit
         shutter.setOnClickListener(v -> takePicture());
         root.addView(shutter);
         
         setContentView(root);
         textureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
-            @Override public void onSurfaceTextureAvailable(SurfaceTexture st, int w, int h) { openCamera(); }
-            @Override public void onSurfaceTextureSizeChanged(SurfaceTexture st, int w, int h) { configureTransform(w, h); }
+            @Override public void onSurfaceTextureAvailable(SurfaceTexture st, int w, int h) { openCamera(w, h); }
+            @Override public void onSurfaceTextureSizeChanged(SurfaceTexture st, int w, int h) {}
             @Override public boolean onSurfaceTextureDestroyed(SurfaceTexture st) { return true; }
             @Override public void onSurfaceTextureUpdated(SurfaceTexture st) {}
         });
     }
 
-    private void openCamera() {
+    private void openCamera(int w, int h) {
         CameraManager manager = (CameraManager) getSystemService(CAMERA_SERVICE);
         try {
             String cid = manager.getCameraIdList()[0];
-            StreamConfigurationMap map = manager.getCameraCharacteristics(cid).get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-            previewSize = map.getOutputSizes(SurfaceTexture.class)[0];
+            // Setup ImageReader untuk ambil foto resolusi tinggi di background
+            imageReader = ImageReader.newInstance(1920, 1080, ImageFormat.JPEG, 2);
+            imageReader.setOnImageAvailableListener(reader -> {
+                saveImage(reader.acquireLatestImage());
+            }, backgroundHandler);
+
             if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) return;
             manager.openCamera(cid, new CameraDevice.StateCallback() {
                 @Override public void onOpened(CameraDevice c) { cameraDevice = c; startPreview(); }
@@ -73,15 +78,15 @@ public class MainActivity extends Activity {
 
     private void startPreview() {
         SurfaceTexture st = textureView.getSurfaceTexture();
-        st.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());
-        Surface surface = new Surface(st);
+        Surface previewSurface = new Surface(st);
+        Surface readerSurface = imageReader.getSurface();
         try {
-            previewBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            previewBuilder.addTarget(surface);
-            cameraDevice.createCaptureSession(Arrays.asList(surface), new CameraCaptureSession.StateCallback() {
+            final CaptureRequest.Builder br = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            br.addTarget(previewSurface);
+            cameraDevice.createCaptureSession(Arrays.asList(previewSurface, readerSurface), new CameraCaptureSession.StateCallback() {
                 @Override public void onConfigured(CameraCaptureSession s) {
                     cameraSession = s;
-                    try { s.setRepeatingRequest(previewBuilder.build(), null, backgroundHandler); } catch (Exception e) {}
+                    try { s.setRepeatingRequest(br.build(), null, backgroundHandler); } catch (Exception e) {}
                 }
                 @Override public void onConfigureFailed(CameraCaptureSession s) {}
             }, backgroundHandler);
@@ -89,50 +94,35 @@ public class MainActivity extends Activity {
     }
 
     private void takePicture() {
-        Bitmap rawBmp = textureView.getBitmap();
-        if (rawBmp == null) return;
-
-        // Paksa turun ke RAM biar Rust & Galeri bisa baca
-        Bitmap softwareBmp = rawBmp.copy(Bitmap.Config.ARGB_8888, false);
-        rawBmp.recycle();
-
-        backgroundHandler.post(() -> {
-            try {
-                ByteBuffer buffer = ByteBuffer.allocate(softwareBmp.getByteCount());
-                softwareBmp.copyPixelsToBuffer(buffer);
-                String report = analyzeFrame(buffer.array(), softwareBmp.getWidth(), softwareBmp.getHeight());
-                
-                runOnUiThread(() -> Toast.makeText(this, report, Toast.LENGTH_SHORT).show());
-                saveToGallery(softwareBmp);
-            } catch (Exception e) {
-                Log.e("xpiz", "Error jepret: " + e.getMessage());
-            }
-        });
+        if (cameraDevice == null || cameraSession == null) return;
+        try {
+            // Ambil satu frame JPEG dari ImageReader
+            CaptureRequest.Builder captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+            captureBuilder.addTarget(imageReader.getSurface());
+            cameraSession.capture(captureBuilder.build(), null, backgroundHandler);
+            Toast.makeText(this, "Cekrek!", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {}
     }
 
-    private void saveToGallery(Bitmap bmp) {
+    private void saveImage(Image img) {
+        ByteBuffer buffer = img.getPlanes()[0].getBuffer();
+        byte[] bytes = new byte[buffer.remaining()];
+        buffer.get(bytes);
+        img.close();
+
+        String fileName = "xpiz_" + System.currentTimeMillis() + ".jpg";
         ContentValues v = new ContentValues();
-        v.put(MediaStore.Images.Media.DISPLAY_NAME, "xpiz_" + System.currentTimeMillis() + ".jpg");
+        v.put(MediaStore.Images.Media.DISPLAY_NAME, fileName);
         v.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
         v.put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/xpiz");
         Uri uri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, v);
-        try (OutputStream out = getContentResolver().openOutputStream(uri)) {
-            bmp.compress(Bitmap.CompressFormat.JPEG, 95, out);
-        } catch (Exception e) {
-            Log.e("xpiz", "Gagal simpan galeri: " + e.getMessage());
-        }
-    }
 
-    private void configureTransform(int w, int h) {
-        if (previewSize == null) return;
-        Matrix m = new Matrix();
-        RectF vRect = new RectF(0, 0, w, h);
-        RectF bRect = new RectF(0, 0, previewSize.getHeight(), previewSize.getWidth());
-        bRect.offset(vRect.centerX() - bRect.centerX(), vRect.centerY() - bRect.centerY());
-        m.setRectToRect(vRect, bRect, Matrix.ScaleToFit.FILL);
-        float s = Math.max((float) h / previewSize.getHeight(), (float) w / previewSize.getWidth());
-        m.postScale(s, s, vRect.centerX(), vRect.centerY());
-        textureView.setTransform(m);
+        try (OutputStream out = getContentResolver().openOutputStream(uri)) {
+            out.write(bytes);
+            // Panggil RUST EDITOR setelah file tersimpan
+            String report = analyzeFrame(fileName, 0, 0);
+            runOnUiThread(() -> Toast.makeText(this, report, Toast.LENGTH_LONG).show());
+        } catch (Exception e) { Log.e("xpiz", "Gagal: " + e.getMessage()); }
     }
 
     private void startBackgroundThread() {
