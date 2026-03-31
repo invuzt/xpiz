@@ -1,14 +1,9 @@
 #include <jni.h>
 
-// Beritahu C kalau fungsi ini ada di Rust (lib.rs)
-extern char* get_hello_rust();
+// Kita tidak butuh kode apa-apa di sini karena 
+// fungsi Rust sudah pakai format Java_com_invuzt_xpiz...
+// Tapi file ini tetap harus ada agar ndk-build tidak error.
 
-JNIEXPORT jstring JNICALL
-Java_com_cakru_dodge_MainActivity_stringFromRust(JNIEnv* env, jobject thiz) {
-    
-    // Panggil Rust
-    char* str = get_hello_rust();
-    
-    // Bungkus jadi String Java
-    return (*env)->NewStringUTF(env, str);
+void dummy_function() {
+    // Kosongkan saja
 }
