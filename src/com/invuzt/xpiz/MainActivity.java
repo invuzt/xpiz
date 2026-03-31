@@ -8,7 +8,7 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.hardware.camera2.*;
 import android.view.Surface;
-import android.widget.Toast;
+import android.util.Log;
 import java.util.Arrays;
 
 public class MainActivity extends Activity {
@@ -18,54 +18,76 @@ public class MainActivity extends Activity {
 
     private native String analyzeFrame(byte[] data, int width, int height);
     private CameraDevice cameraDevice;
+    private CameraCaptureSession cameraSession;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         SurfaceView sv = new SurfaceView(this);
+        // Paksa SurfaceView agar tetap aktif
+        sv.getHolder().setKeepScreenOn(true);
         setContentView(sv);
 
         if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-            startCameraProcess(sv.getHolder());
+            initCamera(sv.getHolder());
         } else {
             requestPermissions(new String[]{Manifest.permission.CAMERA}, 101);
         }
     }
 
-    private void startCameraProcess(SurfaceHolder holder) {
+    private void initCamera(SurfaceHolder holder) {
+        holder.addCallback(new SurfaceHolder.Callback() {
+            @Override
+            public void surfaceCreated(SurfaceHolder h) {
+                openCamera(h);
+            }
+            @Override public void surfaceChanged(SurfaceHolder h, int f, int w, int h1) {}
+            @Override public void surfaceDestroyed(SurfaceHolder h) {
+                if (cameraDevice != null) cameraDevice.close();
+            }
+        });
+    }
+
+    private void openCamera(SurfaceHolder holder) {
         CameraManager manager = (CameraManager) getSystemService(CAMERA_SERVICE);
         try {
-            String cid = manager.getCameraIdList()[0];
-            manager.openCamera(cid, new CameraDevice.StateCallback() {
+            String cameraId = manager.getCameraIdList()[0]; // Kamera belakang
+            manager.openCamera(cameraId, new CameraDevice.StateCallback() {
                 @Override
                 public void onOpened(CameraDevice camera) {
                     cameraDevice = camera;
-                    createPreview(holder);
+                    startPreview(holder.getSurface());
                 }
-                @Override public void onDisconnected(CameraDevice c) { c.close(); }
-                @Override public void onError(CameraDevice c, int e) { c.close(); }
+                @Override public void onDisconnected(CameraDevice camera) { camera.close(); }
+                @Override public void onError(CameraDevice camera, int error) { camera.close(); }
             }, null);
         } catch (Exception e) { e.printStackTrace(); }
     }
 
-    private void createPreview(SurfaceHolder holder) {
+    private void startPreview(Surface surface) {
         try {
-            Surface surface = holder.getSurface();
-            final CaptureRequest.Builder br = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            br.addTarget(surface);
+            // 1. Buat Request untuk PREVIEW
+            final CaptureRequest.Builder builder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            builder.addTarget(surface);
 
+            // 2. Buat Session
             cameraDevice.createCaptureSession(Arrays.asList(surface), new CameraCaptureSession.StateCallback() {
                 @Override
                 public void onConfigured(CameraCaptureSession session) {
+                    cameraSession = session;
                     try {
-                        session.setRepeatingRequest(br.build(), null, null);
-                        // Tes kirim data kecil ke Rust (Simulasi frame)
-                        String hasil = analyzeFrame(new byte[1024], 32, 32);
-                        runOnUiThread(() -> Toast.makeText(MainActivity.this, hasil, Toast.LENGTH_LONG).show());
-                    } catch (Exception e) { e.printStackTrace(); }
+                        // 3. SET REPEATING REQUEST (Kunci agar layar tidak hitam)
+                        builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                        cameraSession.setRepeatingRequest(builder.build(), null, null);
+                        
+                        // Tes Rust Analysis
+                        analyzeFrame(new byte[10], 1, 1);
+                    } catch (CameraAccessException e) { e.printStackTrace(); }
                 }
-                @Override public void onConfigureFailed(CameraCaptureSession s) {}
+                @Override public void onConfigureFailed(CameraCaptureSession session) {
+                    Log.e("xpiz", "Konfigurasi Kamera Gagal!");
+                }
             }, null);
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (CameraAccessException e) { e.printStackTrace(); }
     }
 }
