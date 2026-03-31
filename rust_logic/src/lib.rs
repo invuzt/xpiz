@@ -1,46 +1,28 @@
 use jni::JNIEnv;
 use jni::objects::{JClass, JString};
-use jni::sys::jstring;
-use std::io::{BufRead, BufReader};
-use std::fs::File;
-use std::time::Instant;
+use jni::sys::{jint, jstring};
+use std::collections::HashMap;
 
 #[no_mangle]
-pub extern "system" fn Java_com_invuzt_xpiz_MainActivity_processHugeFile(
+pub extern "system" fn Java_com_invuzt_xpiz_MainActivity_predictBestButton(
     mut env: JNIEnv,
     _class: JClass,
-    path: JString,
+    click_history: jint, // Simulasi ID tombol yang baru diklik
 ) -> jstring {
-    let input: String = env.get_string(&path).expect("Path invalid").into();
-    let start = Instant::now();
-
-    let file = match File::open(&input) {
-        Ok(f) => f,
-        Err(_) => {
-            let res = env.new_string("File data.txt belum ada di folder files!").unwrap();
-            return res.into_raw();
-        }
-    };
+    // Di dunia nyata, data ini disimpan di database (SQLite)
+    // Untuk demo Odfiz, kita simpan daftar menu favorit
+    let menus = vec!["KOPI", "SABUN", "SAMPEL", "STOK"];
     
-    let reader = BufReader::new(file);
-    let mut count: u64 = 0;
-    let mut total_sum: f64 = 0.0;
+    // Logika AI Sederhana: Menebak berdasarkan ID atau urutan
+    // Disini kita buat simulasi 'Smart Suggestion'
+    let suggested = match click_history {
+        1 => "SABUN (Sering dibeli bareng)",
+        2 => "KOPI (Pas buat istirahat)",
+        3 => "LAPORAN (Cek hasil kerja)",
+        _ => "MENU UTAMA",
+    };
 
-    for line in reader.lines() {
-        if let Ok(num_str) = line {
-            if let Ok(num) = num_str.parse::<f64>() {
-                total_sum += num;
-                count += 1;
-            }
-        }
-    }
-
-    let duration = start.elapsed();
-    let hasil = format!(
-        "🚀 Rust Power!\nData: {} baris\nWaktu: {:.2?}\nTotal: {:.2}",
-        count, duration, total_sum
-    );
-
+    let hasil = format!("🤖 Odfiz Suggestion: {}", suggested);
     let output = env.new_string(hasil).expect("Gagal buat string");
     output.into_raw()
 }
