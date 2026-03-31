@@ -1,11 +1,11 @@
 [package]
-name = "cakru_core"
+name = "xpiz_core"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
-name = "cakru_core"
-crate-type = ["staticlib"] # Kita buat static agar menyatu dengan C
+name = "xpiz_core"
+crate-type = ["staticlib", "cdylib"]
 
 [dependencies]
-# Tanpa dependencies berat dulu agar build cepat
+jni = "0.21.1"
