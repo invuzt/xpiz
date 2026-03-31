@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-# Kita buat dua-duanya agar aman (static dan dynamic)
 crate-type = ["staticlib", "cdylib"]
 
 [dependencies]
-jni = { version = "0.21.1" }
+jni = "0.21.1"
+# Tambahkan library AI Smartcore
+smartcore = { version = "0.3.0", default-features = false }
