@@ -1,19 +1,46 @@
+use jni::JNIEnv;
 use jni::objects::{JClass, JString};
 use jni::sys::jstring;
-use jni::JNIEnv;
+use std::io::{BufRead, BufReader};
+use std::fs::File;
+use std::time::Instant;
 
 #[no_mangle]
-pub extern "system" fn Java_com_invuzt_xpiz_MainActivity_analyzeFrame(
+pub extern "system" fn Java_com_invuzt_xpiz_MainActivity_processHugeFile(
     mut env: JNIEnv,
     _class: JClass,
-    file_path: JString,
-    _w: i32,
-    _h: i32,
+    path: JString,
 ) -> jstring {
-    let path: String = env.get_string(&file_path).unwrap().into();
-    
-    // Nanti di sini Rust akan buka file 'path' dan gambar tulisan GPS/Jam
-    let response = format!("Rust Editor: File {} siap diberi Watermark GPS & Jam!", path);
+    let input: String = env.get_string(&path).expect("Path invalid").into();
+    let start = Instant::now();
 
-    env.new_string(response).unwrap().into_raw()
+    let file = match File::open(&input) {
+        Ok(f) => f,
+        Err(_) => {
+            let res = env.new_string("File data.txt belum ada di folder files!").unwrap();
+            return res.into_raw();
+        }
+    };
+    
+    let reader = BufReader::new(file);
+    let mut count: u64 = 0;
+    let mut total_sum: f64 = 0.0;
+
+    for line in reader.lines() {
+        if let Ok(num_str) = line {
+            if let Ok(num) = num_str.parse::<f64>() {
+                total_sum += num;
+                count += 1;
+            }
+        }
+    }
+
+    let duration = start.elapsed();
+    let hasil = format!(
+        "🚀 Rust Power!\nData: {} baris\nWaktu: {:.2?}\nTotal: {:.2}",
+        count, duration, total_sum
+    );
+
+    let output = env.new_string(hasil).expect("Gagal buat string");
+    output.into_raw()
 }

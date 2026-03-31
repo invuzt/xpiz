@@ -2,120 +2,60 @@ package com.invuzt.xpiz;
 
 import android.app.Activity;
 import android.os.*;
-import android.view.*;
 import android.widget.*;
-import android.graphics.*;
-import android.Manifest;
-import android.content.pm.PackageManager;
-import android.hardware.camera2.*;
-import android.util.Log;
-import android.content.ContentValues;
-import android.provider.MediaStore;
-import android.net.Uri;
-import java.io.OutputStream;
-import java.util.Arrays;
+import android.view.Gravity;
+import android.graphics.Color;
+import java.io.*;
 
 public class MainActivity extends Activity {
     static { System.loadLibrary("hello"); }
-    private native String analyzeFrame(String path, int w, int h);
-
-    private CameraDevice cameraDevice;
-    private CameraCaptureSession cameraSession;
-    private TextureView textureView;
-    private Handler backgroundHandler;
-    private HandlerThread backgroundThread;
+    private native String processHugeFile(String path);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        startBackgroundThread();
-        
-        FrameLayout root = new FrameLayout(this);
-        textureView = new TextureView(this);
-        root.addView(textureView);
-        
-        Button shutter = new Button(this);
-        FrameLayout.LayoutParams btn = new FrameLayout.LayoutParams(250, 250);
-        btn.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
-        btn.bottomMargin = 100;
-        shutter.setLayoutParams(btn);
-        shutter.setText("JEPRET");
-        shutter.setBackgroundColor(Color.RED);
-        shutter.setTextColor(Color.WHITE);
-        shutter.setOnClickListener(v -> takePicture());
-        root.addView(shutter);
-        
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setGravity(Gravity.CENTER);
+        root.setBackgroundColor(Color.BLACK);
+
+        TextView tv = new TextView(this);
+        tv.setText("ODFIZ DATA ENGINE\nReady for 10M Rows");
+        tv.setTextColor(Color.GREEN);
+        tv.setGravity(Gravity.CENTER);
+        tv.setTextSize(20);
+        root.addView(tv);
+
+        Button btn = new Button(this);
+        btn.setText("HAJAR 10 JUTA DATA");
+        btn.setPadding(20, 20, 20, 20);
+        root.addView(btn);
+
         setContentView(root);
-        textureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
-            @Override public void onSurfaceTextureAvailable(SurfaceTexture st, int w, int h) { openCamera(); }
-            @Override public void onSurfaceTextureSizeChanged(SurfaceTexture st, int w, int h) {}
-            @Override public boolean onSurfaceTextureDestroyed(SurfaceTexture st) { return true; }
-            @Override public void onSurfaceTextureUpdated(SurfaceTexture st) {}
+
+        btn.setOnClickListener(v -> {
+            String path = getFilesDir() + "/data.txt";
+            tv.setText("Rust sedang bekerja...");
+            
+            new Thread(() -> {
+                String hasil = processHugeFile(path);
+                runOnUiThread(() -> tv.setText(hasil));
+            }).start();
         });
-    }
 
-    private void openCamera() {
-        CameraManager manager = (CameraManager) getSystemService(CAMERA_SERVICE);
-        try {
-            String cid = manager.getCameraIdList()[0];
-            if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) return;
-            manager.openCamera(cid, new CameraDevice.StateCallback() {
-                @Override public void onOpened(CameraDevice c) { cameraDevice = c; startPreview(); }
-                @Override public void onDisconnected(CameraDevice c) { c.close(); }
-                @Override public void onError(CameraDevice c, int e) { c.close(); }
-            }, backgroundHandler);
-        } catch (Exception e) {}
-    }
-
-    private void startPreview() {
-        SurfaceTexture st = textureView.getSurfaceTexture();
-        Surface surface = new Surface(st);
-        try {
-            final CaptureRequest.Builder br = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            br.addTarget(surface);
-            cameraDevice.createCaptureSession(Arrays.asList(surface), new CameraCaptureSession.StateCallback() {
-                @Override public void onConfigured(CameraCaptureSession s) {
-                    cameraSession = s;
-                    try { s.setRepeatingRequest(br.build(), null, backgroundHandler); } catch (Exception e) {}
-                }
-                @Override public void onConfigureFailed(CameraCaptureSession s) {}
-            }, backgroundHandler);
-        } catch (Exception e) {}
-    }
-
-    private void takePicture() {
-        // AMBIL APA YANG ADA DI LAYAR SAAT INI
-        Bitmap bmp = textureView.getBitmap();
-        if (bmp == null) return;
-
-        backgroundHandler.post(() -> {
-            try {
-                String name = "xpiz_" + System.currentTimeMillis() + ".jpg";
-                ContentValues v = new ContentValues();
-                v.put(MediaStore.Images.Media.DISPLAY_NAME, name);
-                v.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
-                v.put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/xpiz");
-
-                Uri uri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, v);
-                if (uri != null) {
-                    try (OutputStream out = getContentResolver().openOutputStream(uri)) {
-                        // Simpan dengan kualitas 100% biar gak pecah
-                        bmp.compress(Bitmap.CompressFormat.JPEG, 100, out);
-                        
-                        // Sapa Rust pelan-pelan
-                        String r = analyzeFrame(name, bmp.getWidth(), bmp.getHeight());
-                        runOnUiThread(() -> Toast.makeText(this, "Foto Tersimpan! " + r, Toast.LENGTH_SHORT).show());
+        // Buat file dummy 10 juta baris jika belum ada
+        new Thread(() -> {
+            File f = new File(getFilesDir(), "data.txt");
+            if (!f.exists()) {
+                try {
+                    PrintWriter out = new PrintWriter(f);
+                    for (int i = 1; i <= 10000000; i++) {
+                        out.println(i);
                     }
-                }
-            } catch (Exception e) {
-                Log.e("xpiz", "Gagal: " + e.getMessage());
+                    out.close();
+                } catch (Exception e) {}
             }
-        });
-    }
-
-    private void startBackgroundThread() {
-        backgroundThread = new HandlerThread("CamBack");
-        backgroundThread.start();
-        backgroundHandler = new Handler(backgroundThread.getLooper());
+        }).start();
     }
 }
