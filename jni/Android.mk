@@ -3,10 +3,11 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE    := hello
-# Kita pakai dummy source agar ndk-build mau jalan
 LOCAL_SRC_FILES := hello.c
 LOCAL_LDLIBS    := -llog -landroid
-LOCAL_STATIC_LIBRARIES := xpiz_core_static
+
+# PAKSA NDK ambil semua simbol dari Rust (Jangan ada yang dibuang!)
+LOCAL_WHOLE_STATIC_LIBRARIES := xpiz_core_static
 
 include $(BUILD_SHARED_LIBRARY)
 
