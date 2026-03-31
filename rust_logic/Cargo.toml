@@ -1,10 +1,11 @@
 [package]
-name = "rust_logic"
+name = "xpiz_core"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
-crate-type = ["cdylib"]
+# Kita buat dua-duanya agar aman (static dan dynamic)
+crate-type = ["staticlib", "cdylib"]
 
 [dependencies]
 jni = { version = "0.21.1" }
