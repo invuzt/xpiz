@@ -4,6 +4,7 @@
     <uses-feature android:name="android.hardware.camera" android:required="true" />
     
     <application android:hasCode="true" android:label="xpiz Mobile">
+        <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34" />
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

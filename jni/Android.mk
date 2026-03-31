@@ -4,8 +4,10 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE    := hello
 LOCAL_SRC_FILES := hello.c
-# Link ke library kamera bawaan Android
+# Urutan sangat menentukan di NDK
 LOCAL_LDLIBS    := -llog -landroid -lcamera2ndk -lmediandk
+
+# Ambil semua simbol dari Rust
 LOCAL_WHOLE_STATIC_LIBRARIES := xpiz_core_static
 
 include $(BUILD_SHARED_LIBRARY)
