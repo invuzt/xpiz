@@ -5,7 +5,7 @@ PLATFORM ?= 34
 BUILD_TOOLS ?= $(SDK_PATH)/build-tools/34.0.0
 
 # --- Nama Project ---
-PACKAGE_PATH = com/cakru/dodge
+PACKAGE_PATH = com.invuzt.xpiz
 
 build: clean
 	# 1. Build Rust Logic

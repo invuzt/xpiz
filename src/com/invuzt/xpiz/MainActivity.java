@@ -1,4 +1,4 @@
-package com.cakru.dodge;
+package com.invuzt.xpiz;
 
 import android.app.Activity;
 import android.os.Bundle;

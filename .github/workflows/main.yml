@@ -1,4 +1,4 @@
-name: Build Cakru Dodge
+name: Build xpiz Mobile
 
 on: [push]
 
@@ -32,10 +32,10 @@ jobs:
           
           # 1. Compile Java pakai -cp (Bukan boot-class-path)
           mkdir -p obj/java
-          javac -d obj/java -cp $PLATFORM_JAR src/com/cakru/dodge/MainActivity.java
+          javac -d obj/java -cp $PLATFORM_JAR src/com.invuzt.xpiz/MainActivity.java
           
           # 2. Ubah Class ke classes.dex
-          $BUILD_TOOLS_PATH/d8 --release --lib $PLATFORM_JAR --output . obj/java/com/cakru/dodge/*.class
+          $BUILD_TOOLS_PATH/d8 --release --lib $PLATFORM_JAR --output . obj/java/com.invuzt.xpiz/*.class
 
       - name: Assemble APK
         run: |
@@ -43,9 +43,9 @@ jobs:
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
 
           echo '<?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.cakru.dodge">
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.invuzt.xpiz">
               <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34" />
-              <application android:hasCode="true" android:label="Cakru Dodge">
+              <application android:hasCode="true" android:label="xpiz Mobile">
                   <activity android:name=".MainActivity" android:exported="true">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />

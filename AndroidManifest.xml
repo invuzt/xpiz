@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.cakru.dodge">
+    package="com.invuzt.xpiz">
 
     <application 
         android:label="Cakru" 
         android:hasCode="true">
         
         <activity
-            android:name="com.cakru.dodge.MainActivity"
+            android:name="com.invuzt.xpiz.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
