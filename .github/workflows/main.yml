@@ -30,14 +30,14 @@ jobs:
           BUILD_TOOLS_PATH=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
           
-          # 1. Compile Java pakai -cp (Bukan boot-class-path)
           mkdir -p obj/java
-          javac -d obj/java -cp $PLATFORM_JAR src/com.invuzt.xpiz/MainActivity.java
+          # Folder sudah diperbaiki pakai garis miring (/)
+          javac -d obj/java -cp $PLATFORM_JAR src/com/invuzt/xpiz/MainActivity.java
           
-          # 2. Ubah Class ke classes.dex
-          $BUILD_TOOLS_PATH/d8 --release --lib $PLATFORM_JAR --output . obj/java/com.invuzt.xpiz/*.class
+          # D8 juga cari di folder yang benar
+          $BUILD_TOOLS_PATH/d8 --release --lib $PLATFORM_JAR --output . obj/java/com/invuzt/xpiz/*.class
 
-      - name: Assemble APK
+      - name: Assemble APK (xpiz Core)
         run: |
           BUILD_TOOLS_PATH=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
@@ -56,20 +56,20 @@ jobs:
           </manifest>' > AndroidManifest.xml
 
           mkdir -p empty_res
-          $BUILD_TOOLS_PATH/aapt package -f -M AndroidManifest.xml -I $PLATFORM_JAR -F cakru-temp.apk empty_res
-          zip -g cakru-temp.apk classes.dex
+          $BUILD_TOOLS_PATH/aapt package -f -M AndroidManifest.xml -I $PLATFORM_JAR -F xpiz-temp.apk empty_res
+          zip -g xpiz-temp.apk classes.dex
           mkdir -p lib/arm64-v8a
           cp libs/arm64-v8a/libhello.so lib/arm64-v8a/
-          zip -g cakru-temp.apk lib/arm64-v8a/libhello.so
+          zip -g xpiz-temp.apk lib/arm64-v8a/libhello.so
 
       - name: Sign APK
         run: |
-          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Cakru"
+          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=xpiz"
           BUILD_TOOLS_PATH=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
-          $BUILD_TOOLS_PATH/apksigner sign --ks debug.keystore --ks-pass pass:android --out cakru.apk cakru-temp.apk
+          $BUILD_TOOLS_PATH/apksigner sign --ks debug.keystore --ks-pass pass:android --out xpiz.apk xpiz-temp.apk
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Cakru-Dodge-Build
-          path: cakru.apk
+          name: xpiz-Mobile-Build
+          path: xpiz.apk
