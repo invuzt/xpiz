@@ -1,15 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.invuzt.xpiz">
-
-    <application
-        android:label="xpiz Mobile"
-        android:hasCode="true"
-        android:allowBackup="true">
-
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.invuzt.xpiz">
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="true" />
+    
+    <application android:hasCode="true" android:label="xpiz Mobile">
+        <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

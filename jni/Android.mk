@@ -4,9 +4,8 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE    := hello
 LOCAL_SRC_FILES := hello.c
-LOCAL_LDLIBS    := -llog -landroid
-
-# PAKSA NDK ambil semua simbol dari Rust (Jangan ada yang dibuang!)
+# Link ke library kamera bawaan Android
+LOCAL_LDLIBS    := -llog -landroid -lcamera2ndk -lmediandk
 LOCAL_WHOLE_STATIC_LIBRARIES := xpiz_core_static
 
 include $(BUILD_SHARED_LIBRARY)

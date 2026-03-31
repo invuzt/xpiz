@@ -9,3 +9,6 @@ crate-type = ["staticlib", "cdylib"]
 
 [dependencies]
 jni = "0.21.1"
+# Library NDK untuk akses Kamera & Window (Layar)
+ndk = { version = "0.7.0", features = ["media", "native_window"] }
+ndk-sys = "0.4.0"
