@@ -13,6 +13,7 @@ import android.content.ContentValues;
 import android.provider.MediaStore;
 import android.net.Uri;
 import java.io.OutputStream;
+import java.util.Arrays;
 
 public class MainActivity extends Activity {
     static { System.loadLibrary("hello"); }
@@ -34,11 +35,13 @@ public class MainActivity extends Activity {
         root.addView(textureView);
         
         Button shutter = new Button(this);
-        FrameLayout.LayoutParams btn = new FrameLayout.LayoutParams(220, 220);
+        FrameLayout.LayoutParams btn = new FrameLayout.LayoutParams(250, 250);
         btn.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
-        btn.bottomMargin = 80;
+        btn.bottomMargin = 100;
         shutter.setLayoutParams(btn);
-        shutter.setBackgroundColor(Color.WHITE);
+        shutter.setText("JEPRET");
+        shutter.setBackgroundColor(Color.RED);
+        shutter.setTextColor(Color.WHITE);
         shutter.setOnClickListener(v -> takePicture());
         root.addView(shutter);
         
@@ -61,7 +64,7 @@ public class MainActivity extends Activity {
                 @Override public void onDisconnected(CameraDevice c) { c.close(); }
                 @Override public void onError(CameraDevice c, int e) { c.close(); }
             }, backgroundHandler);
-        } catch (Exception e) { Log.e("xpiz", "Gagal buka kamera"); }
+        } catch (Exception e) {}
     }
 
     private void startPreview() {
@@ -70,7 +73,7 @@ public class MainActivity extends Activity {
         try {
             final CaptureRequest.Builder br = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             br.addTarget(surface);
-            cameraDevice.createCaptureSession(java.util.Arrays.asList(surface), new CameraCaptureSession.StateCallback() {
+            cameraDevice.createCaptureSession(Arrays.asList(surface), new CameraCaptureSession.StateCallback() {
                 @Override public void onConfigured(CameraCaptureSession s) {
                     cameraSession = s;
                     try { s.setRepeatingRequest(br.build(), null, backgroundHandler); } catch (Exception e) {}
@@ -81,31 +84,31 @@ public class MainActivity extends Activity {
     }
 
     private void takePicture() {
-        // Ambil bitmap sekarang juga di UI Thread biar gak Putih layarnya
+        // AMBIL APA YANG ADA DI LAYAR SAAT INI
         Bitmap bmp = textureView.getBitmap();
         if (bmp == null) return;
 
         backgroundHandler.post(() -> {
             try {
-                String fileName = "xpiz_" + System.currentTimeMillis() + ".jpg";
+                String name = "xpiz_" + System.currentTimeMillis() + ".jpg";
                 ContentValues v = new ContentValues();
-                v.put(MediaStore.Images.Media.DISPLAY_NAME, fileName);
+                v.put(MediaStore.Images.Media.DISPLAY_NAME, name);
                 v.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
                 v.put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/xpiz");
-                
+
                 Uri uri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, v);
                 if (uri != null) {
                     try (OutputStream out = getContentResolver().openOutputStream(uri)) {
-                        bmp.compress(Bitmap.CompressFormat.JPEG, 90, out);
-                        out.flush();
+                        // Simpan dengan kualitas 100% biar gak pecah
+                        bmp.compress(Bitmap.CompressFormat.JPEG, 100, out);
                         
-                        // Kabari Rust untuk editor nanti
-                        String report = analyzeFrame(fileName, bmp.getWidth(), bmp.getHeight());
-                        runOnUiThread(() -> Toast.makeText(this, "Berhasil! " + report, Toast.LENGTH_SHORT).show());
+                        // Sapa Rust pelan-pelan
+                        String r = analyzeFrame(name, bmp.getWidth(), bmp.getHeight());
+                        runOnUiThread(() -> Toast.makeText(this, "Foto Tersimpan! " + r, Toast.LENGTH_SHORT).show());
                     }
                 }
             } catch (Exception e) {
-                Log.e("xpiz", "Gagal simpan: " + e.getMessage());
+                Log.e("xpiz", "Gagal: " + e.getMessage());
             }
         });
     }
