@@ -1,40 +1,32 @@
-use jni::JNIEnv;
 use jni::objects::{JClass, JByteArray};
-use jni::sys::{jstring, jbyteArray, jint};
+use jni::sys::{jint, jstring};
+use jni::JNIEnv;
 
 #[no_mangle]
-pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_analyzeFrame(
-    env: JNIEnv,
+pub extern "system" fn Java_com_invuzt_xpiz_MainActivity_analyzeFrame(
+    mut env: JNIEnv,
     _class: JClass,
-    data: jbyteArray,
+    image_data: JByteArray,
     width: jint,
     height: jint,
 ) -> jstring {
-    // 1. Bungkus pointer mentah (data) menjadi objek JByteArray yang dimengerti Rust
-    let byte_array = unsafe { JByteArray::from_raw(data) };
-    
-    // 2. Sekarang baru bisa dikonversi ke Vec<u8> (byte array milik Rust)
-    let input = env.convert_byte_array(&byte_array).unwrap_or(vec![]);
-    
-    // 3. Simulasi Analisis (Contoh: ambil ukuran data)
-    let info = format!(
-        "Rust Engine: Frame {}x{} diterima. Data: {} bytes. Aman! 🦀", 
-        width, height, input.len()
+    // Ambil data dari Java
+    let input = env.convert_byte_array(&image_data).unwrap_or_default();
+    let len = input.len();
+
+    // Logika Sat-set: Hitung rata-rata kecerahan (Grayscale sederhana)
+    // Ini cuma contoh, tapi ini jalan di CPU Native (Cepet banget!)
+    let avg_brightness = if len > 0 {
+        let sum: u64 = input.iter().take(1000).map(|&b| b as u64).sum();
+        sum / 1000
+    } else {
+        0
+    };
+
+    let response = format!(
+        "Rust Engine: {}x{} px processed. Data size: {} bytes. Avg Bright: {}",
+        width, height, len, avg_brightness
     );
 
-    // Jangan lupa "lupakan" byte_array agar tidak terjadi double free karena JNI yang mengaturnya
-    std::mem::forget(byte_array);
-
-    // 4. Kirim hasil balik ke Java
-    let output = env.new_string(info).expect("Gagal buat string!");
-    output.into_raw()
-}
-
-#[no_mangle]
-pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_stringFromRust(
-    env: JNIEnv,
-    _class: JClass,
-) -> jstring {
-    let output = env.new_string("xpiz Hybrid System: Online!").unwrap();
-    output.into_raw()
+    env.new_string(response).unwrap().into_raw()
 }
