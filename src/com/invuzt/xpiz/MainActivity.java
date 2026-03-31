@@ -35,6 +35,8 @@ public class MainActivity extends Activity {
 
         FrameLayout root = new FrameLayout(this);
         textureView = new TextureView(this);
+        // Penting: Pastikan Opaque agar tidak tembus pandang (Putih/Hitam)
+        textureView.setOpaque(true); 
         root.addView(textureView);
 
         lastCapturePreview = new ImageView(this);
@@ -43,7 +45,8 @@ public class MainActivity extends Activity {
         galleryParams.gravity = Gravity.BOTTOM | Gravity.START;
         galleryParams.setMargins(50, 0, 0, 100);
         lastCapturePreview.setLayoutParams(galleryParams);
-        lastCapturePreview.setBackgroundColor(Color.parseColor("#33FFFFFF"));
+        // Kasih background gelap agar kalau foto gagal, kelihatan bedanya
+        lastCapturePreview.setBackgroundColor(Color.BLACK); 
         lastCapturePreview.setScaleType(ImageView.ScaleType.CENTER_CROP);
         root.addView(lastCapturePreview);
 
@@ -121,18 +124,31 @@ public class MainActivity extends Activity {
     }
 
     private void takePicture() {
-        Bitmap capture = textureView.getBitmap();
-        if (capture == null) return;
-        lastCapturePreview.setImageBitmap(capture);
+        if (!textureView.isAvailable()) return;
         
-        try {
-            File photoFile = new File(getExternalFilesDir(null), "xpiz_" + System.currentTimeMillis() + ".jpg");
-            FileOutputStream fos = new FileOutputStream(photoFile);
-            capture.compress(Bitmap.CompressFormat.JPEG, 90, fos);
-            fos.close();
-            analyzeFrame(new byte[1], 1, 1);
-            Toast.makeText(this, "Foto Disimpan!", Toast.LENGTH_SHORT).show();
-        } catch (IOException e) { e.printStackTrace(); }
+        // Ambil Bitmap dengan ukuran yang sama dengan Preview agar tidak pecah/putih
+        Bitmap capture = textureView.getBitmap(previewSize.getWidth(), previewSize.getHeight());
+        
+        if (capture != null) {
+            // Tampilkan ke ImageView (Preview Pojok)
+            runOnUiThread(() -> lastCapturePreview.setImageBitmap(capture));
+            
+            // Simpan ke File
+            try {
+                File photoFile = new File(getExternalFilesDir(null), "xpiz_" + System.currentTimeMillis() + ".jpg");
+                FileOutputStream fos = new FileOutputStream(photoFile);
+                capture.compress(Bitmap.CompressFormat.JPEG, 90, fos);
+                fos.close();
+                
+                // Sapa Rust
+                analyzeFrame(new byte[1], 1, 1);
+                Toast.makeText(this, "Tersimpan di: " + photoFile.getName(), Toast.LENGTH_SHORT).show();
+            } catch (IOException e) {
+                Log.e("xpiz", "Gagal simpan: " + e.getMessage());
+            }
+        } else {
+            Toast.makeText(this, "Gagal mengambil frame!", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void configureTransform(int viewWidth, int viewHeight) {
