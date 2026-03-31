@@ -16,7 +16,6 @@ import android.net.Uri;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Collections;
 
 public class MainActivity extends Activity {
     static { System.loadLibrary("hello"); }
@@ -36,11 +35,8 @@ public class MainActivity extends Activity {
         startBackgroundThread();
         FrameLayout root = new FrameLayout(this);
         textureView = new TextureView(this);
-        textureView.setOnTouchListener((v, event) -> {
-            if (event.getAction() == MotionEvent.ACTION_DOWN) triggerFocus();
-            return true;
-        });
         root.addView(textureView);
+        
         Button shutter = new Button(this);
         FrameLayout.LayoutParams btn = new FrameLayout.LayoutParams(220, 220);
         btn.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
@@ -49,6 +45,7 @@ public class MainActivity extends Activity {
         shutter.setBackgroundColor(Color.WHITE);
         shutter.setOnClickListener(v -> takePicture());
         root.addView(shutter);
+        
         setContentView(root);
         textureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
             @Override public void onSurfaceTextureAvailable(SurfaceTexture st, int w, int h) { openCamera(); }
@@ -91,19 +88,27 @@ public class MainActivity extends Activity {
     }
 
     private void takePicture() {
+        // 1. Ambil Bitmap Utama dari TextureView
+        Bitmap mainBmp = textureView.getBitmap();
+        if (mainBmp == null) return;
+
+        // 2. Clone/Copy Bitmap agar tidak bentrok
+        Bitmap rustBmp = mainBmp.copy(Bitmap.Config.ARGB_8888, true);
+
         backgroundHandler.post(() -> {
-            Bitmap bmp = textureView.getBitmap();
-            if (bmp == null) return;
-
-            // SAT-SET: Kirim ke Rust
-            ByteBuffer buffer = ByteBuffer.allocate(bmp.getByteCount());
-            bmp.copyPixelsToBuffer(buffer);
-            String report = analyzeFrame(buffer.array(), bmp.getWidth(), bmp.getHeight());
+            // PROSES RUST (Pakai Copy)
+            ByteBuffer buffer = ByteBuffer.allocate(rustBmp.getByteCount());
+            rustBmp.copyPixelsToBuffer(buffer);
+            byte[] rustData = buffer.array();
+            String report = analyzeFrame(rustData, rustBmp.getWidth(), rustBmp.getHeight());
             
-            runOnUiThread(() -> Toast.makeText(this, report, Toast.LENGTH_LONG).show());
-
-            // Simpan Galeri
-            saveToGallery(bmp);
+            runOnUiThread(() -> Toast.makeText(this, report, Toast.LENGTH_SHORT).show());
+            
+            // PROSES GALERI (Pakai Bitmap Utama)
+            saveToGallery(mainBmp);
+            
+            // Cleanup memory
+            rustBmp.recycle();
         });
     }
 
@@ -114,17 +119,8 @@ public class MainActivity extends Activity {
         v.put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/xpiz");
         Uri uri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, v);
         try (OutputStream out = getContentResolver().openOutputStream(uri)) {
+            // Pastikan compress tidak terganggu Rust
             bmp.compress(Bitmap.CompressFormat.JPEG, 95, out);
-        } catch (Exception e) {}
-    }
-
-    private void triggerFocus() {
-        if (cameraSession == null) return;
-        try {
-            previewBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
-            cameraSession.capture(previewBuilder.build(), null, backgroundHandler);
-            previewBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_IDLE);
-            cameraSession.setRepeatingRequest(previewBuilder.build(), null, backgroundHandler);
         } catch (Exception e) {}
     }
 
