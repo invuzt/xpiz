@@ -88,27 +88,29 @@ public class MainActivity extends Activity {
     }
 
     private void takePicture() {
-        // 1. Ambil Bitmap Utama dari TextureView
-        Bitmap mainBmp = textureView.getBitmap();
-        if (mainBmp == null) return;
+        // 1. Ambil Bitmap dari TextureView (Bisa jadi format HARDWARE)
+        Bitmap rawBmp = textureView.getBitmap();
+        if (rawBmp == null) return;
 
-        // 2. Clone/Copy Bitmap agar tidak bentrok
-        Bitmap rustBmp = mainBmp.copy(Bitmap.Config.ARGB_8888, true);
+        // 2. PAKSA KONVERSI KE SOFTWARE MEMORY (ARGB_8888)
+        // Ini kunci agar Rust & Galeri tidak dapet data hitam/kosong
+        Bitmap softwareBmp = rawBmp.copy(Bitmap.Config.ARGB_8888, false);
+        rawBmp.recycle(); // Buang yang hardware
 
         backgroundHandler.post(() -> {
-            // PROSES RUST (Pakai Copy)
-            ByteBuffer buffer = ByteBuffer.allocate(rustBmp.getByteCount());
-            rustBmp.copyPixelsToBuffer(buffer);
-            byte[] rustData = buffer.array();
-            String report = analyzeFrame(rustData, rustBmp.getWidth(), rustBmp.getHeight());
-            
-            runOnUiThread(() -> Toast.makeText(this, report, Toast.LENGTH_SHORT).show());
-            
-            // PROSES GALERI (Pakai Bitmap Utama)
-            saveToGallery(mainBmp);
-            
-            // Cleanup memory
-            rustBmp.recycle();
+            try {
+                // 3. Kirim data asli ke Rust
+                ByteBuffer buffer = ByteBuffer.allocate(softwareBmp.getByteCount());
+                softwareBmp.copyPixelsToBuffer(buffer);
+                String report = analyzeFrame(buffer.array(), softwareBmp.getWidth(), softwareBmp.getHeight());
+                
+                runOnUiThread(() -> Toast.makeText(this, report, Toast.LENGTH_SHORT).show());
+                
+                // 4. Simpan ke Galeri
+                saveToGallery(softwareBmp);
+            } finally {
+                // softwareBmp.recycle(); // Opsional, biarkan GC yang urus jika sering crash
+            }
         });
     }
 
@@ -119,9 +121,10 @@ public class MainActivity extends Activity {
         v.put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/xpiz");
         Uri uri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, v);
         try (OutputStream out = getContentResolver().openOutputStream(uri)) {
-            // Pastikan compress tidak terganggu Rust
             bmp.compress(Bitmap.CompressFormat.JPEG, 95, out);
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            Log.e("xpiz", "Gagal simpan galeri: " + e.getMessage());
+        }
     }
 
     private void configureTransform(int w, int h) {
