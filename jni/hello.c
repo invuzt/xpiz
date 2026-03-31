@@ -1,9 +1,3 @@
 #include <jni.h>
-
-extern jstring Java_com_invuzt_xpiz_MainActivity_analyzeFrame(
-    JNIEnv *env, jobject thiz, jbyteArray data, jint w, jint h);
-
-JNIEXPORT jstring JNICALL
-Java_com_invuzt_xpiz_MainActivity_analyzeFrame(JNIEnv *env, jobject thiz, jbyteArray data, jint w, jint h) {
-    return Java_com_invuzt_xpiz_MainActivity_analyzeFrame(env, thiz, data, w, h);
-}
+// Kosongkan saja Mas, fungsi analyzeFrame sudah ada di libxpiz_core.a (Rust)
+// ndk-build butuh satu file .c agar mau jalan, jadi biarkan file ini ada.
