@@ -9,139 +9,169 @@ import android.graphics.pdf.PdfDocument;
 import android.view.inputmethod.EditorInfo;
 import java.io.*;
 import java.util.*;
-import java.text.SimpleDateFormat;
 
 public class MainActivity extends Activity {
     static { System.loadLibrary("hello"); }
     private native String predictBestButton(String cmd);
 
-    private LinearLayout productContainer;
-    private TextView totalView, reportView;
-    private int totalBelanja = 0, totalOmset = 0, transaksiCount = 0;
-    private String currentItems = "";
+    private LinearLayout pageTerminal, pageLaporan, pageAbout, productContainer;
+    private TextView totalView, txtStruk, txtRekap;
+    private int totalBelanja = 0, omset = 0, txCount = 0;
+    private String currentReceipt = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // Root Layout dengan Toolbar
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.WHITE); // Layout Putih Bersih
+        root.setBackgroundColor(Color.WHITE);
 
-        // 1. Tombol Produk
-        HorizontalScrollView hScroll = new HorizontalScrollView(this);
-        productContainer = new LinearLayout(this);
-        hScroll.addView(productContainer);
-        root.addView(hScroll);
+        // --- TOOLBAR ---
+        setupToolbar(root);
 
-        // 2. Display Kasir
-        totalView = new TextView(this);
-        totalView.setText("Rp 0");
-        totalView.setTextColor(Color.BLACK);
-        totalView.setTextSize(40);
-        totalView.setGravity(Gravity.CENTER);
-        root.addView(totalView);
+        // --- CONTENT AREA (Pages) ---
+        FrameLayout content = new FrameLayout(this);
+        initTerminalPage();
+        initLaporanPage();
+        initAboutPage();
+        
+        content.addView(pageTerminal);
+        content.addView(pageLaporan);
+        content.addView(pageAbout);
+        root.addView(content);
 
-        // 3. Laporan Real-time (Sembunyi/Tampil)
-        reportView = new TextView(this);
-        reportView.setText("LAPORAN HARI INI: Rp 0 | Transaksi: 0");
-        reportView.setTextColor(Color.BLUE);
-        root.addView(reportView);
-
-        // 4. Area Struk di Layar
-        TextView receiptPreview = new TextView(this);
-        receiptPreview.setTypeface(Typeface.MONOSPACE);
-        receiptPreview.setBackgroundColor(Color.LTGRAY);
-        root.addView(receiptPreview, new LinearLayout.LayoutParams(-1, 0, 1.0f));
-
-        // 5. Input
-        EditText input = new EditText(this);
-        input.setHint("Nama:Harga atau Nominal Bayar");
-        input.setSingleLine(true);
-        input.setImeOptions(EditorInfo.IME_ACTION_SEND);
-        root.addView(input);
-
-        input.setOnEditorActionListener((v, id, event) -> {
-            String txt = input.getText().toString();
-            if(!txt.isEmpty()){
-                String res = predictBestButton(txt);
-                if(res.startsWith("ADD")) {
-                    String[] p = res.split("\\|");
-                    addBtn(p[1], Integer.parseInt(p[2]));
-                } else if(res.startsWith("PAY_CUSTOM")) {
-                    finalizeSale(Integer.parseInt(res.split("\\|")[1]), receiptPreview);
-                }
-                input.setText("");
-            }
-            return true;
-        });
+        showPage(pageTerminal);
         setContentView(root);
     }
 
-    private void addBtn(String n, int h) {
+    private void setupToolbar(LinearLayout root) {
+        Toolbar toolbar = new Toolbar(this);
+        toolbar.setTitle("Odfiz POS");
+        toolbar.setBackgroundColor(Color.parseColor("#212121"));
+        toolbar.setTitleTextColor(Color.WHITE);
+        
+        // Menu Titik 3
+        toolbar.inflateMenu(android.R.menu.search); // Pakai dummy dulu
+        toolbar.getMenu().add(0, 1, 0, "Terminal");
+        toolbar.getMenu().add(0, 2, 0, "Laporan");
+        toolbar.getMenu().add(0, 3, 0, "About");
+        
+        toolbar.setOnMenuItemClickListener(item -> {
+            if(item.getItemId() == 1) showPage(pageTerminal);
+            if(item.getItemId() == 2) showPage(pageLaporan);
+            if(item.getItemId() == 3) showPage(pageAbout);
+            return true;
+        });
+        root.addView(toolbar);
+    }
+
+    private void initTerminalPage() {
+        pageTerminal = new LinearLayout(this);
+        pageTerminal.setOrientation(LinearLayout.VERTICAL);
+        pageTerminal.setPadding(20,20,20,20);
+
+        HorizontalScrollView h = new HorizontalScrollView(this);
+        productContainer = new LinearLayout(this);
+        h.addView(productContainer);
+        pageTerminal.addView(h);
+
+        totalView = new TextView(this);
+        totalView.setText("Rp 0");
+        totalView.setTextSize(40);
+        totalView.setGravity(Gravity.CENTER);
+        pageTerminal.addView(totalView);
+
+        txtStruk = new TextView(this);
+        txtStruk.setTypeface(Typeface.MONOSPACE);
+        txtStruk.setBackgroundColor(Color.parseColor("#F5F5F5"));
+        txtStruk.setHint("Struk akan muncul di sini (Klik untuk Print)");
+        txtStruk.setOnClickListener(v -> savePdf());
+        pageTerminal.addView(txtStruk, new LinearLayout.LayoutParams(-1, 0, 1.0f));
+
+        EditText input = new EditText(this);
+        input.setHint("Input Nama:Harga atau Bayar");
+        input.setSingleLine(true);
+        input.setImeOptions(EditorInfo.IME_ACTION_SEND);
+        input.setOnEditorActionListener((v, id, event) -> {
+            String res = predictBestButton(input.getText().toString());
+            handleCmd(res);
+            input.setText("");
+            return true;
+        });
+        pageTerminal.addView(input);
+    }
+
+    private void handleCmd(String res) {
+        String[] p = res.split("\\|");
+        if(p[0].equals("ADD")) addProduct(p[1], Integer.parseInt(p[2]));
+        else if(p[0].equals("PAY")) finalizePay(Integer.parseInt(p[1]));
+    }
+
+    private void addProduct(String n, int h) {
         Button b = new Button(this);
         b.setText(n);
         b.setOnClickListener(v -> {
             totalBelanja += h;
-            currentItems += n + "  Rp" + h + "\n";
-            totalView.setText("Rp " + totalBelanja);
+            updateTotal();
+        });
+        b.setOnLongClickListener(v -> {
+            if(totalBelanja >= h) totalBelanja -= h;
+            updateTotal();
+            return true;
         });
         productContainer.addView(b);
     }
 
-    private void finalizeSale(int bayar, TextView preview) {
-        String noAntrian = predictBestButton("get_next_queue");
-        String time = new SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(new Date());
-        
-        StringBuilder struk = new StringBuilder();
-        struk.append("      ODFIZ PONOROGO\n");
-        struk.append("--------------------------\n");
-        struk.append("ANTRIAN : #").append(noAntrian).append("\n");
-        struk.append("WAKTU   : ").append(time).append("\n");
-        struk.append("--------------------------\n");
-        struk.append(currentItems);
-        struk.append("--------------------------\n");
-        struk.append("TOTAL   : Rp ").append(totalBelanja).append("\n");
-        struk.append("BAYAR   : Rp ").append(bayar).append("\n");
-        struk.append("KEMBALI : Rp ").append(bayar - totalBelanja).append("\n");
-        struk.append("--------------------------\n");
-        struk.append("   TERIMA KASIH LUR!\n");
-
-        preview.setText(struk.toString());
-        
-        // Simpan ke Laporan
-        totalOmset += totalBelanja;
-        transaksiCount++;
-        reportView.setText("OMSET: Rp " + totalOmset + " | TX: " + transaksiCount);
-
-        // Reset Kasir
+    private void finalizePay(int bayar) {
+        currentReceipt = "   ODFIZ STRUK\nTotal: " + totalBelanja + "\nBayar: " + bayar + "\nKembali: " + (bayar-totalBelanja);
+        txtStruk.setText(currentReceipt);
+        omset += totalBelanja;
+        txCount++;
         totalBelanja = 0;
-        currentItems = "";
-        totalView.setText("Rp 0");
-        
-        saveAsPdf(struk.toString(), noAntrian);
+        updateTotal();
+        txtRekap.setText("Total Omset: Rp " + omset + "\nTotal Transaksi: " + txCount);
     }
 
-    private void saveAsPdf(String content, String no) {
-        PdfDocument doc = new PdfDocument();
-        PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(300, 600, 1).create();
-        PdfDocument.Page page = doc.startPage(pageInfo);
-        Canvas canvas = page.getCanvas();
-        Paint paint = new Paint();
-        paint.setTextSize(12);
-        paint.setTypeface(Typeface.MONOSPACE);
+    private void initLaporanPage() {
+        pageLaporan = new LinearLayout(this);
+        pageLaporan.setOrientation(LinearLayout.VERTICAL);
+        txtRekap = new TextView(this);
+        txtRekap.setTextSize(20);
+        txtRekap.setText("Belum ada transaksi.");
+        pageLaporan.addView(txtRekap);
+    }
 
-        int y = 50;
-        for (String line : content.split("\n")) {
-            canvas.drawText(line, 20, y, paint);
-            y += 20;
-        }
+    private void initAboutPage() {
+        pageAbout = new LinearLayout(this);
+        pageAbout.setGravity(Gravity.CENTER);
+        TextView t = new TextView(this);
+        t.setText("Odfiz POS v2.0\nBy Developer Ponorogo");
+        pageAbout.addView(t);
+    }
+
+    private void showPage(View p) {
+        pageTerminal.setVisibility(View.GONE);
+        pageLaporan.setVisibility(View.GONE);
+        pageAbout.setVisibility(View.GONE);
+        p.setVisibility(View.VISIBLE);
+    }
+
+    private void updateTotal() { totalView.setText("Rp " + totalBelanja); }
+
+    private void savePdf() {
+        if(currentReceipt.isEmpty()) return;
+        PdfDocument doc = new PdfDocument();
+        PdfDocument.PageInfo pi = new PdfDocument.PageInfo.Builder(300, 500, 1).create();
+        PdfDocument.Page page = doc.startPage(pi);
+        page.getCanvas().drawText(currentReceipt, 10, 50, new Paint());
         doc.finishPage(page);
-        
-        File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Struk_Odfiz_"+no+".pdf");
         try {
-            doc.writeTo(new FileOutputStream(file));
-            Toast.makeText(this, "Struk PDF Disimpan!", Toast.LENGTH_SHORT).show();
-        } catch (IOException e) { e.printStackTrace(); }
+            File f = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "OdfizStruk.pdf");
+            doc.writeTo(new FileOutputStream(f));
+            Toast.makeText(this, "Struk PDF Berhasil Dibuat di Downloads!", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {}
         doc.close();
     }
 }
