@@ -11,7 +11,7 @@ public class MainActivity extends Activity {
     static { System.loadLibrary("hello"); }
     private native String getContentFromRust(int pageId);
     
-    // --- CSS / STYLE LANGSUNG DI SINI ---
+    // --- CSS STYLE ---
     static class Style {
         static final int BG = Color.parseColor("#081512");
         static final int AKSEN = Color.parseColor("#D0C9FF");
@@ -30,80 +30,101 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // Root Container
         RelativeLayout root = new RelativeLayout(this);
         root.setBackgroundColor(Style.BG);
 
+        // 1. Header (Logo)
+        TextView logo = new TextView(this);
+        logo.setId(View.generateViewId());
+        logo.setText("XPIZ®");
+        logo.setTextSize(26);
+        logo.setTypeface(null, Typeface.BOLD);
+        logo.setTextColor(Style.PUTIH);
+        logo.setPadding(60, 120, 0, 40);
+        root.addView(logo);
+
+        // 2. Navigasi Bawah (Dibuat dulu supaya bisa jadi patokan)
+        LinearLayout nav = buatNavigasi();
+        nav.setId(View.generateViewId());
+        RelativeLayout.LayoutParams navParams = new RelativeLayout.LayoutParams(-2, -2);
+        navParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+        navParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
+        navParams.setMargins(0, 0, 0, 100);
+        root.addView(nav, navParams);
+
+        // 3. Area Konten (Di tengah antara Logo dan Navigasi)
+        ScrollView scroll = new ScrollView(this);
+        RelativeLayout.LayoutParams scrollParams = new RelativeLayout.LayoutParams(-1, -1);
+        scrollParams.addRule(RelativeLayout.BELOW, logo.getId());
+        scrollParams.addRule(RelativeLayout.ABOVE, nav.getId());
+        scrollParams.setMargins(60, 20, 60, 20);
+        
         contentArea = new LinearLayout(this);
         contentArea.setOrientation(LinearLayout.VERTICAL);
-        contentArea.setPadding(60, 300, 60, 300);
-        
-        ScrollView scroll = new ScrollView(this);
         scroll.addView(contentArea);
-        root.addView(scroll);
+        root.addView(scroll, scrollParams);
 
-        buatNavigasi(root);
         setContentView(root);
         bukaTraining();
     }
 
-    void bukaTraining() {
+    private LinearLayout buatNavigasi() {
+        LinearLayout n = new LinearLayout(this);
+        n.setBackground(Style.bulat(Color.BLACK, 100));
+        n.setPadding(20, 15, 20, 15);
+        
+        btnProg = buatTombol(" PROGRESS ");
+        btnTrain = buatTombol(" TRAINING ");
+        btnAbout = buatTombol("  •••  ");
+
+        btnProg.setOnClickListener(v -> bukaHalaman(2));
+        btnTrain.setOnClickListener(v -> bukaHalaman(1));
+        btnAbout.setOnClickListener(v -> bukaHalaman(3));
+
+        n.addView(btnProg);
+        n.addView(btnTrain);
+        n.addView(btnAbout);
+        return n;
+    }
+
+    private TextView buatTombol(String teks) {
+        TextView tv = new TextView(this);
+        tv.setText(teks);
+        tv.setGravity(Gravity.CENTER);
+        tv.setPadding(40, 30, 40, 30);
+        tv.setTypeface(null, Typeface.BOLD);
+        return tv;
+    }
+
+    void bukaHalaman(int id) {
         contentArea.removeAllViews();
-        updateTombol(false, true, false);
+        updateTombol(id);
+        
         TextView t = new TextView(this);
-        t.setText(getContentFromRust(1));
-        t.setTextColor(Style.PUTIH); t.setTextSize(20);
+        t.setTextColor(Style.PUTIH);
+        t.setTextSize(19);
+        t.setLineSpacing(10, 1.2f);
+        
+        if (id == 3) {
+            t.setText("XPIZ SYSTEM\n\nStatus: Online\nEngine: Rust Core\nUI: Java Dynamic\n\nBuild 2026.04");
+        } else {
+            t.setText(getContentFromRust(id));
+        }
         contentArea.addView(t);
     }
 
-    void updateTombol(boolean p, boolean t, boolean a) {
-        if(btnProg == null) return;
-        btnProg.setBackground(p ? Style.bulat(Style.AKSEN, 80) : null);
-        btnProg.setTextColor(p ? Color.BLACK : Style.PUTIH);
-        btnTrain.setBackground(t ? Style.bulat(Style.AKSEN, 80) : null);
-        btnTrain.setTextColor(t ? Color.BLACK : Style.PUTIH);
-        btnAbout.setBackground(a ? Style.bulat(Style.AKSEN, 80) : null);
-        btnAbout.setTextColor(a ? Color.BLACK : Style.PUTIH);
+    void updateTombol(int activeId) {
+        btnProg.setBackground(activeId == 2 ? Style.bulat(Style.AKSEN, 80) : null);
+        btnProg.setTextColor(activeId == 2 ? Color.BLACK : Style.PUTIH);
+        
+        btnTrain.setBackground(activeId == 1 ? Style.bulat(Style.AKSEN, 80) : null);
+        btnTrain.setTextColor(activeId == 1 ? Color.BLACK : Style.PUTIH);
+        
+        btnAbout.setBackground(activeId == 3 ? Style.bulat(Style.AKSEN, 80) : null);
+        btnAbout.setTextColor(activeId == 3 ? Color.BLACK : Style.PUTIH);
     }
-
-    void buatNavigasi(RelativeLayout root) {
-        LinearLayout nav = new LinearLayout(this);
-        nav.setBackground(Style.bulat(Color.BLACK, 100));
-        nav.setPadding(20, 10, 20, 10);
-        nav.setGravity(Gravity.CENTER);
-
-        btnProg = new TextView(this); btnProg.setText(" PROGRESS ");
-        btnProg.setPadding(40, 30, 40, 30);
-        btnProg.setOnClickListener(v -> {
-            contentArea.removeAllViews();
-            updateTombol(true, false, false);
-            TextView t = new TextView(this);
-            t.setText(getContentFromRust(2));
-            t.setTextColor(Style.PUTIH); t.setTextSize(20);
-            contentArea.addView(t);
-        });
-        nav.addView(btnProg);
-
-        btnTrain = new TextView(this); btnTrain.setText(" TRAINING ");
-        btnTrain.setPadding(40, 30, 40, 30);
-        btnTrain.setOnClickListener(v -> bukaTraining());
-        nav.addView(btnTrain);
-
-        btnAbout = new TextView(this); btnAbout.setText(" ••• ");
-        btnAbout.setPadding(40, 30, 40, 30);
-        btnAbout.setOnClickListener(v -> {
-            contentArea.removeAllViews();
-            updateTombol(false, false, true);
-            TextView t = new TextView(this);
-            t.setText("XPIZ VERSION 1.0\n\nEngine: Rust\nUI: All-in-One");
-            t.setTextColor(Style.PUTIH); t.setTextSize(18);
-            contentArea.addView(t);
-        });
-        nav.addView(btnAbout);
-
-        RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(-2, -2);
-        lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
-        lp.addRule(RelativeLayout.CENTER_HORIZONTAL);
-        lp.setMargins(0, 0, 0, 100);
-        root.addView(nav, lp);
-    }
+    
+    void bukaTraining() { bukaHalaman(1); }
 }
