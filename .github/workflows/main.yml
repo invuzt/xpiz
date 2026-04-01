@@ -31,7 +31,7 @@ jobs:
           BUILD_TOOLS_PATH=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
           mkdir -p obj/java
-          javac -d obj/java -cp $PLATFORM_JAR src/com/invuzt/xpiz/MainActivity.java
+          javac -d obj/java -cp $PLATFORM_JAR src/com/invuzt/xpiz/*.java
           $BUILD_TOOLS_PATH/d8 --release --lib $PLATFORM_JAR --output . obj/java/com/invuzt/xpiz/*.class
 
       - name: Assemble & Sign APK
