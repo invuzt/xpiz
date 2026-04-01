@@ -16,11 +16,19 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // PENTING: Inisialisasi tema dulu
+        BrikStyle.updateTheme(this);
         super.onCreate(savedInstanceState);
         
-        // Immersive Mode
         Window w = getWindow();
-        w.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+        int flags = View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
+        
+        // Jika Light Mode, buat ikon status bar jadi gelap (biar kelihatan)
+        if (CL_TEXT_PRIMARY == Color.BLACK) {
+            flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        }
+        
+        w.getDecorView().setSystemUiVisibility(flags);
         w.setStatusBarColor(CL_BLACK);
 
         RelativeLayout root = new RelativeLayout(this);
@@ -51,7 +59,8 @@ public class MainActivity extends Activity {
         RelativeLayout h = new RelativeLayout(this);
         h.setPadding(PAD_SCREEN, 130, PAD_SCREEN, 40);
         TextView logo = new TextView(this);
-        logo.setText(BRAND_NAME); logo.setTextSize(26); logo.setTextColor(Color.WHITE);
+        logo.setText(BRAND_NAME); logo.setTextSize(26); 
+        logo.setTextColor(CL_TEXT_PRIMARY); // Adaptif
         h.addView(logo);
         p.addView(h);
     }
@@ -59,8 +68,6 @@ public class MainActivity extends Activity {
     private void drawTrainingUI() {
         contentArea.removeAllViews();
         updateTabStyles(false, true, false);
-        
-        // Cukup panggil dari BrikStyle
         contentArea.addView(createWhiteCard(contentArea, "Rhythm match"));
         space(contentArea, 20);
         contentArea.addView(createWhiteCard(contentArea, "Sequence rush"));
@@ -69,8 +76,6 @@ public class MainActivity extends Activity {
     private void drawProgressUI() {
         contentArea.removeAllViews();
         updateTabStyles(true, false, false);
-        
-        // Cukup panggil dari BrikStyle
         contentArea.addView(createStatCard(contentArea, "Total XP", "4,250"));
         space(contentArea, 20);
         contentArea.addView(createStatCard(contentArea, "Rust Native", getHelloFromRust()));
@@ -80,27 +85,30 @@ public class MainActivity extends Activity {
         contentArea.removeAllViews();
         updateTabStyles(false, false, true);
         TextView title = new TextView(this);
-        title.setText("About " + BRAND_NAME); title.setTextColor(Color.WHITE); title.setTextSize(24);
+        title.setText("About " + BRAND_NAME); 
+        title.setTextColor(CL_TEXT_PRIMARY); title.setTextSize(24);
         contentArea.addView(title);
         space(contentArea, 40);
-        
         TextView desc = new TextView(this);
-        desc.setText("XPIZ Mobile v1.0\nBuilt in Ponorogo.");
+        desc.setText("XPIZ Mobile v1.0\nPonorogo Digital Works");
         desc.setTextColor(Color.GRAY);
         contentArea.addView(desc);
     }
 
     private void updateTabStyles(boolean isP, boolean isT, boolean isA) {
         btnProg.setBackground(isP ? round(CL_ACCENT, RADIUS_NAV) : null);
-        btnProg.setTextColor(isP ? Color.BLACK : Color.WHITE);
+        btnProg.setTextColor(isP ? (CL_TEXT_PRIMARY == Color.BLACK ? Color.WHITE : Color.BLACK) : CL_TEXT_PRIMARY);
+        
         btnTrain.setBackground(isT ? round(CL_ACCENT, RADIUS_NAV) : null);
-        btnTrain.setTextColor(isT ? Color.BLACK : Color.WHITE);
+        btnTrain.setTextColor(isT ? (CL_TEXT_PRIMARY == Color.BLACK ? Color.WHITE : Color.BLACK) : CL_TEXT_PRIMARY);
+        
         btnAbout.setBackground(isA ? round(CL_ACCENT, RADIUS_NAV) : null);
-        btnAbout.setTextColor(isA ? Color.BLACK : Color.WHITE);
+        btnAbout.setTextColor(isA ? (CL_TEXT_PRIMARY == Color.BLACK ? Color.WHITE : Color.BLACK) : CL_TEXT_PRIMARY);
     }
 
     private void addBottomNav(RelativeLayout root) {
         LinearLayout navWrap = new LinearLayout(this);
+        // Navigasi tetap hitam pekat biar kontras, atau bisa Mas ganti CL_BLACK
         navWrap.setBackground(round(Color.BLACK, 100));
         navWrap.setPadding(10, 10, 10, 10);
         navWrap.setGravity(Gravity.CENTER);
