@@ -5,119 +5,143 @@ import android.os.*;
 import android.widget.*;
 import android.view.*;
 import android.graphics.*;
+import android.graphics.pdf.PdfDocument;
 import android.view.inputmethod.EditorInfo;
+import java.io.*;
+import java.util.*;
+import java.text.SimpleDateFormat;
 
 public class MainActivity extends Activity {
     static { System.loadLibrary("hello"); }
     private native String predictBestButton(String cmd);
 
-    private LinearLayout productContainer, payActionContainer;
-    private TextView totalView, log;
-    private int totalBelanja = 0;
+    private LinearLayout productContainer;
+    private TextView totalView, reportView;
+    private int totalBelanja = 0, totalOmset = 0, transaksiCount = 0;
+    private String currentItems = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.BLACK);
-        root.setPadding(20, 20, 20, 20);
+        root.setBackgroundColor(Color.WHITE); // Layout Putih Bersih
 
+        // 1. Tombol Produk
         HorizontalScrollView hScroll = new HorizontalScrollView(this);
         productContainer = new LinearLayout(this);
         hScroll.addView(productContainer);
         root.addView(hScroll);
 
+        // 2. Display Kasir
         totalView = new TextView(this);
         totalView.setText("Rp 0");
-        totalView.setTextColor(Color.YELLOW);
+        totalView.setTextColor(Color.BLACK);
         totalView.setTextSize(40);
         totalView.setGravity(Gravity.CENTER);
         root.addView(totalView);
 
-        payActionContainer = new LinearLayout(this);
-        payActionContainer.setGravity(Gravity.CENTER);
-        root.addView(payActionContainer);
+        // 3. Laporan Real-time (Sembunyi/Tampil)
+        reportView = new TextView(this);
+        reportView.setText("LAPORAN HARI INI: Rp 0 | Transaksi: 0");
+        reportView.setTextColor(Color.BLUE);
+        root.addView(reportView);
 
-        log = new TextView(this);
-        log.setTextColor(Color.GREEN);
-        log.setTypeface(Typeface.MONOSPACE);
-        ScrollView vScroll = new ScrollView(this);
-        vScroll.addView(log);
-        root.addView(vScroll, new LinearLayout.LayoutParams(-1, 0, 1.0f));
+        // 4. Area Struk di Layar
+        TextView receiptPreview = new TextView(this);
+        receiptPreview.setTypeface(Typeface.MONOSPACE);
+        receiptPreview.setBackgroundColor(Color.LTGRAY);
+        root.addView(receiptPreview, new LinearLayout.LayoutParams(-1, 0, 1.0f));
 
+        // 5. Input
         EditText input = new EditText(this);
-        input.setHint("Ketik Nama:Harga atau Angka Bayar");
+        input.setHint("Nama:Harga atau Nominal Bayar");
         input.setSingleLine(true);
         input.setImeOptions(EditorInfo.IME_ACTION_SEND);
-        input.setTextColor(Color.WHITE);
         root.addView(input);
 
-        input.setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == EditorInfo.IME_ACTION_SEND || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
-                String txt = input.getText().toString();
-                if(!txt.isEmpty()){
-                    handleOutput(predictBestButton(txt));
-                    input.setText("");
+        input.setOnEditorActionListener((v, id, event) -> {
+            String txt = input.getText().toString();
+            if(!txt.isEmpty()){
+                String res = predictBestButton(txt);
+                if(res.startsWith("ADD")) {
+                    String[] p = res.split("\\|");
+                    addBtn(p[1], Integer.parseInt(p[2]));
+                } else if(res.startsWith("PAY_CUSTOM")) {
+                    finalizeSale(Integer.parseInt(res.split("\\|")[1]), receiptPreview);
                 }
-                return true;
+                input.setText("");
             }
-            return false;
+            return true;
         });
         setContentView(root);
     }
 
-    private void handleOutput(String res) {
-        String[] p = res.split("\\|");
-        if (p[0].equals("ADD")) {
-            makeBtn(p[1], Integer.parseInt(p[2]));
-        } else if (p[0].equals("PAY_CUSTOM")) {
-            finalizePrint((int)Float.parseFloat(p[1]));
-        } else if (p[0].equals("SUGGEST")) {
-            showSuggestedPay(res);
-        }
-    }
-
-    private void makeBtn(String n, int h) {
+    private void addBtn(String n, int h) {
         Button b = new Button(this);
-        b.setText(n + "\n" + h);
+        b.setText(n);
         b.setOnClickListener(v -> {
             totalBelanja += h;
+            currentItems += n + "  Rp" + h + "\n";
             totalView.setText("Rp " + totalBelanja);
-            handleOutput(predictBestButton("predict|" + totalBelanja));
-        });
-        b.setOnLongClickListener(v -> {
-            if(totalBelanja >= h) totalBelanja -= h;
-            totalView.setText("Rp " + totalBelanja);
-            handleOutput(predictBestButton("predict|" + totalBelanja));
-            return true;
         });
         productContainer.addView(b);
     }
 
-    private void showSuggestedPay(String sug) {
-        payActionContainer.removeAllViews();
-        String[] p = sug.split("\\|");
-        for(int i=1; i<p.length; i++) {
-            final int nominal = (int)Float.parseFloat(p[i]);
-            Button b = new Button(this);
-            b.setText("Rp " + nominal);
-            b.setOnClickListener(v -> finalizePrint(nominal));
-            payActionContainer.addView(b);
-        }
+    private void finalizeSale(int bayar, TextView preview) {
+        String noAntrian = predictBestButton("get_next_queue");
+        String time = new SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(new Date());
+        
+        StringBuilder struk = new StringBuilder();
+        struk.append("      ODFIZ PONOROGO\n");
+        struk.append("--------------------------\n");
+        struk.append("ANTRIAN : #").append(noAntrian).append("\n");
+        struk.append("WAKTU   : ").append(time).append("\n");
+        struk.append("--------------------------\n");
+        struk.append(currentItems);
+        struk.append("--------------------------\n");
+        struk.append("TOTAL   : Rp ").append(totalBelanja).append("\n");
+        struk.append("BAYAR   : Rp ").append(bayar).append("\n");
+        struk.append("KEMBALI : Rp ").append(bayar - totalBelanja).append("\n");
+        struk.append("--------------------------\n");
+        struk.append("   TERIMA KASIH LUR!\n");
+
+        preview.setText(struk.toString());
+        
+        // Simpan ke Laporan
+        totalOmset += totalBelanja;
+        transaksiCount++;
+        reportView.setText("OMSET: Rp " + totalOmset + " | TX: " + transaksiCount);
+
+        // Reset Kasir
+        totalBelanja = 0;
+        currentItems = "";
+        totalView.setText("Rp 0");
+        
+        saveAsPdf(struk.toString(), noAntrian);
     }
 
-    private void finalizePrint(int bayar) {
-        int kembali = bayar - totalBelanja;
-        log.setText(""); // New Bill
-        log.append("\n=== ODFIZ STRUK ===");
-        log.append("\nTOTAL    : " + totalBelanja);
-        log.append("\nBAYAR    : " + bayar);
-        log.append("\nKEMBALI  : " + kembali);
-        log.append("\n====================");
+    private void saveAsPdf(String content, String no) {
+        PdfDocument doc = new PdfDocument();
+        PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(300, 600, 1).create();
+        PdfDocument.Page page = doc.startPage(pageInfo);
+        Canvas canvas = page.getCanvas();
+        Paint paint = new Paint();
+        paint.setTextSize(12);
+        paint.setTypeface(Typeface.MONOSPACE);
+
+        int y = 50;
+        for (String line : content.split("\n")) {
+            canvas.drawText(line, 20, y, paint);
+            y += 20;
+        }
+        doc.finishPage(page);
         
-        totalBelanja = 0;
-        totalView.setText("Rp 0");
-        payActionContainer.removeAllViews();
+        File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Struk_Odfiz_"+no+".pdf");
+        try {
+            doc.writeTo(new FileOutputStream(file));
+            Toast.makeText(this, "Struk PDF Disimpan!", Toast.LENGTH_SHORT).show();
+        } catch (IOException e) { e.printStackTrace(); }
+        doc.close();
     }
 }

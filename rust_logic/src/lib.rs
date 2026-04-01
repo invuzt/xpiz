@@ -1,6 +1,9 @@
 use jni::JNIEnv;
 use jni::objects::{JClass, JString};
 use jni::sys::{jstring};
+use std::sync::Mutex;
+
+static QUEUE_NUMBER: Mutex<i32> = Mutex::new(1);
 
 #[no_mangle]
 pub unsafe extern "system" fn Java_com_invuzt_xpiz_MainActivity_predictBestButton(
@@ -12,24 +15,21 @@ pub unsafe extern "system" fn Java_com_invuzt_xpiz_MainActivity_predictBestButto
         .expect("ERR").into();
     let input = input.trim().to_lowercase();
 
-    // 1. Logika Prediksi Uang Pecahan (Request dari UI)
-    if input.starts_with("predict|") {
-        let total: f32 = input[8..].parse().unwrap_or(0.0);
-        let p1 = (total / 5000.0).ceil() * 5000.0;
-        let p2 = (total / 50000.0).ceil() * 50000.0;
-        let p3 = 100000.0;
-        return return_string(&mut env, &format!("SUGGEST|{}|{}|{}", p1, p2, p3));
+    // Ambil & Naikkan Nomor Antrian
+    if input == "get_next_queue" {
+        let mut q = QUEUE_NUMBER.lock().unwrap();
+        let current = *q;
+        *q += 1;
+        return return_string(&mut env, &format!("{}", current));
     }
 
-    // 2. Jika Input Angka Murni (Bayar Custom)
-    if let Ok(bayar) = input.parse::<f32>() {
-        return return_string(&mut env, &format!("PAY_CUSTOM|{}", bayar));
-    }
-
-    // 3. Jika Input Nama : Harga (Tambah Menu)
     if input.contains(':') {
         let parts: Vec<&str> = input.split(':').collect();
         return return_string(&mut env, &format!("ADD|{}|{}", parts[0].trim().to_uppercase(), parts[1].trim()));
+    }
+
+    if let Ok(bayar) = input.parse::<f32>() {
+        return return_string(&mut env, &format!("PAY_CUSTOM|{}", bayar));
     }
 
     return_string(&mut env, "IDLE")
