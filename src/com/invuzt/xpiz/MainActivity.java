@@ -5,6 +5,7 @@ import android.os.*;
 import android.widget.*;
 import android.view.*;
 import android.graphics.*;
+import android.view.inputmethod.EditorInfo;
 import java.util.HashMap;
 
 public class MainActivity extends Activity {
@@ -14,7 +15,6 @@ public class MainActivity extends Activity {
     private LinearLayout productContainer, payActionContainer;
     private TextView totalView, log;
     private int totalBelanja = 0;
-    private HashMap<String, Button> productButtons = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -22,27 +22,28 @@ public class MainActivity extends Activity {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.parseColor("#121212"));
+        root.setPadding(20, 20, 20, 20);
 
-        // 1. Tombol Produk
+        // 1. Area Tombol Produk
         HorizontalScrollView hScroll = new HorizontalScrollView(this);
         productContainer = new LinearLayout(this);
         hScroll.addView(productContainer);
         root.addView(hScroll);
 
-        // 2. Total
+        // 2. Display Total
         totalView = new TextView(this);
         totalView.setText("Rp 0");
         totalView.setTextColor(Color.YELLOW);
-        totalView.setTextSize(45);
+        totalView.setTextSize(40);
         totalView.setGravity(Gravity.CENTER);
         root.addView(totalView);
 
-        // 3. Tombol Bayar Prediktif (AI Area)
+        // 3. Area Tombol Bayar AI
         payActionContainer = new LinearLayout(this);
         payActionContainer.setGravity(Gravity.CENTER);
         root.addView(payActionContainer);
 
-        // 4. Log/Struk
+        // 4. Log Struk
         log = new TextView(this);
         log.setTextColor(Color.GREEN);
         log.setTypeface(Typeface.MONOSPACE);
@@ -50,84 +51,77 @@ public class MainActivity extends Activity {
         vScroll.addView(log);
         root.addView(vScroll, new LinearLayout.LayoutParams(-1, 0, 1.0f));
 
-        // 5. Input Manual
+        // 5. INPUT YANG SUDAH DI-FIX ENTER-NYA
         EditText input = new EditText(this);
-        input.setHint("Tambah Produk: 'Nama : Harga'");
+        input.setHint("Nama : Harga (Lalu Enter)");
+        input.setSingleLine(true); // INI BIAR GAK TURUN KE BAWAH
+        input.setImeOptions(EditorInfo.IME_ACTION_SEND); // GANTI ENTER JADI KIRIM
         input.setTextColor(Color.WHITE);
         root.addView(input);
 
-        input.setOnEditorActionListener((v, id, event) -> {
-            String res = predictBestButton(input.getText().toString());
-            if(res.startsWith("ADD")) {
-                String[] p = res.split("\\|");
-                addProductButton(p[1], Integer.parseInt(p[2]));
+        // Listener buat dengerin tombol Enter/Send
+        input.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_SEND || 
+                (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
+                
+                String txt = input.getText().toString();
+                if(!txt.isEmpty()){
+                    String res = predictBestButton(txt);
+                    handleRes(res);
+                    input.setText(""); // Bersihkan input
+                }
+                return true; // Bilang ke sistem: "Gak usah turun ke bawah!"
             }
-            input.setText("");
-            return true;
+            return false;
         });
+
         setContentView(root);
     }
 
-    private void addProductButton(String n, int h) {
-        Button b = new Button(this);
-        b.setText(n + "\n" + h);
-        
-        // Klik Biasa = TAMBAH
-        b.setOnClickListener(v -> {
-            totalBelanja += h;
-            updateUI();
-        });
-
-        // Klik Tahan = KURANGI (Mencegah Salah Klik)
-        b.setOnLongClickListener(v -> {
-            if(totalBelanja >= h) {
-                totalBelanja -= h;
-                updateUI();
-                Toast.makeText(this, n + " dikurangi", Toast.LENGTH_SHORT).show();
-            }
-            return true;
-        });
-
-        productContainer.addView(b);
-        productButtons.put(n, b);
-    }
-
-    private void updateUI() {
-        totalView.setText("Rp " + totalBelanja);
-        // Minta AI tebak nominal uang bayar
-        String suggestions = predictBestButton("predict_pay|" + totalBelanja);
-        updatePayButtons(suggestions);
-    }
-
-    private void updatePayButtons(String sug) {
-        payActionContainer.removeAllViews();
-        if(sug.startsWith("SUGGEST")) {
-            String[] p = sug.split("\\|");
-            for(int i=1; i<p.length; i++) {
-                final int nominal = (int)Float.parseFloat(p[i]);
-                Button b = new Button(this);
-                b.setText("BAYAR " + nominal);
-                b.setBackgroundColor(Color.BLUE);
-                b.setTextColor(Color.WHITE);
-                b.setOnClickListener(v -> finalizeTransaction(nominal));
-                payActionContainer.addView(b);
-            }
+    private void handleRes(String res) {
+        String[] p = res.split("\\|");
+        if (p[0].equals("ADD")) {
+            makeBtn(p[1], Integer.parseInt(p[2]));
+        } else if (p[0].equals("SUGGEST")) {
+            // Logika Bayar AI
+        } else {
+            log.append("\n> " + res);
         }
     }
 
-    private void finalizeTransaction(int bayar) {
-        int kembali = bayar - totalBelanja;
-        log.setText(""); // Bersihkan log untuk struk baru
-        log.append("\n=== ODFIZ STRUK (PDF READY) ===");
-        log.append("\nItem Belanja Tercatat...");
-        log.append("\nTOTAL    : Rp " + totalBelanja);
-        log.append("\nBAYAR    : Rp " + bayar);
-        log.append("\nKEMBALI  : Rp " + kembali);
-        log.append("\n===============================");
-        log.append("\nTerima Kasih!");
-        
-        totalBelanja = 0;
-        totalView.setText("Rp 0");
+    private void makeBtn(String n, int h) {
+        Button b = new Button(this);
+        b.setText(n + "\n" + h);
+        b.setOnClickListener(v -> {
+            totalBelanja += h;
+            totalView.setText("Rp " + totalBelanja);
+            // Minta AI tebak duit bayar
+            String sug = predictBestButton("predict_pay|" + totalBelanja);
+            showPayButtons(sug);
+        });
+        b.setOnLongClickListener(v -> {
+            if(totalBelanja >= h) totalBelanja -= h;
+            totalView.setText("Rp " + totalBelanja);
+            return true;
+        });
+        productContainer.addView(b);
+    }
+
+    private void showPayButtons(String sug) {
         payActionContainer.removeAllViews();
+        if(!sug.startsWith("SUGGEST")) return;
+        String[] p = sug.split("\\|");
+        for(int i=1; i<p.length; i++) {
+            final int nominal = (int)Float.parseFloat(p[i]);
+            Button b = new Button(this);
+            b.setText("BAYAR " + nominal);
+            b.setOnClickListener(v -> {
+                log.setText("\n=== STRUK ===\nTOTAL: " + totalBelanja + "\nBAYAR: " + nominal + "\nKEMBALI: " + (nominal-totalBelanja));
+                totalBelanja = 0;
+                totalView.setText("Rp 0");
+                payActionContainer.removeAllViews();
+            });
+            payActionContainer.addView(b);
+        }
     }
 }
