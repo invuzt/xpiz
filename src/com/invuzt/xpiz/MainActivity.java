@@ -12,97 +12,129 @@ public class MainActivity extends Activity {
     static { System.loadLibrary("hello"); }
     private native String predictBestButton(String cmd);
 
-    private LinearLayout container;
+    private LinearLayout productContainer;
     private TextView totalView, log;
-    private int total = 0;
-    private HashMap<String, Button> menuButtons = new HashMap<>();
+    private int totalBelanja = 0;
+    private HashMap<String, Button> productButtons = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.parseColor("#0A0A0A"));
-        root.setPadding(20, 20, 20, 20);
+        root.setBackgroundColor(Color.parseColor("#121212"));
+        root.setPadding(25, 25, 25, 25);
 
+        // --- 1. AREA PRODUK MODULAR (Scrolling Horizontal) ---
         HorizontalScrollView hScroll = new HorizontalScrollView(this);
-        container = new LinearLayout(this);
-        hScroll.addView(container);
+        productContainer = new LinearLayout(this);
+        hScroll.addView(productContainer);
         root.addView(hScroll);
 
+        // --- 2. DISPLAY TOTAL HARGA ---
         totalView = new TextView(this);
-        totalView.setText("TOTAL: 0");
-        totalView.setTextColor(Color.CYAN);
-        totalView.setTextSize(40);
+        totalView.setText("Rp 0");
+        totalView.setTextColor(Color.YELLOW);
+        totalView.setTextSize(45);
         totalView.setGravity(Gravity.CENTER);
         root.addView(totalView);
 
+        // --- 3. TOMBOL PERMANEN (PRINT & RESET) ---
+        LinearLayout actionArea = new LinearLayout(this);
+        actionArea.setGravity(Gravity.CENTER);
+        
+        Button btnPrint = new Button(this);
+        btnPrint.setText("PRINT STRUK");
+        btnPrint.setBackgroundColor(Color.parseColor("#2E7D32")); // Hijau
+        btnPrint.setTextColor(Color.WHITE);
+        btnPrint.setOnClickListener(v -> cetakStruk());
+        
+        Button btnReset = new Button(this);
+        btnReset.setText("RESET");
+        btnReset.setBackgroundColor(Color.RED);
+        btnReset.setTextColor(Color.WHITE);
+        btnReset.setOnClickListener(v -> resetTransaksi());
+
+        actionArea.addView(btnPrint);
+        actionArea.addView(btnReset);
+        root.addView(actionArea);
+
+        // --- 4. LOG TRANSAKSI ---
         log = new TextView(this);
-        log.setTextColor(Color.parseColor("#00FF00"));
+        log.setTextColor(Color.GREEN);
         log.setTypeface(Typeface.MONOSPACE);
         ScrollView vScroll = new ScrollView(this);
         vScroll.addView(log);
         root.addView(vScroll, new LinearLayout.LayoutParams(-1, 0, 1.0f));
 
+        // --- 5. INPUT COMMAND (Tambah Produk / Masukkan Uang Bayar) ---
         EditText input = new EditText(this);
-        input.setHint("Perintah: tambah/hapus/print");
+        input.setHint("Ketik 'Dimsum : 15000' atau '50000'");
         input.setSingleLine(true);
         input.setImeOptions(EditorInfo.IME_ACTION_SEND);
         input.setTextColor(Color.WHITE);
         root.addView(input);
 
         input.setOnEditorActionListener((v, id, event) -> {
-            String res = predictBestButton(input.getText().toString());
-            executeCommand(res);
-            input.setText("");
+            String txt = input.getText().toString();
+            if(!txt.isEmpty()) {
+                String res = predictBestButton(txt);
+                handleAiResponse(res);
+                input.setText("");
+            }
             return true;
         });
+
         setContentView(root);
     }
 
-    private void executeCommand(String res) {
+    private void handleAiResponse(String res) {
         String[] p = res.split("\\|");
-        if (p[0].equals("CMD_ADD")) {
-            createMenuButton(p[1], Integer.parseInt(p[2]));
-        } else if (p[0].equals("CMD_DEL")) {
-            removeMenuButton(p[1]);
-        } else if (p[0].equals("CMD_PRINT")) {
-            generateReceipt();
-        } else if (p[0].equals("CMD_CASH")) {
-            log.append("\n[KAS] Bayar: " + p[1] + " | Sisa: " + (Integer.parseInt(p[1]) - total));
+        if (p[0].equals("ADD")) {
+            addProductButton(p[1], Integer.parseInt(p[2]));
+        } else if (p[0].equals("DEL")) {
+            removeProductButton(p[1]);
+        } else if (p[0].equals("CALC_CHANGE")) {
+            int bayar = (int)Float.parseFloat(p[1]);
+            int kembali = bayar - totalBelanja;
+            log.append("\n[KASIR] Bayar: " + bayar + " | KEMBALI: " + kembali);
+            if (kembali < 0) Toast.makeText(this, "Uang Kurang!", Toast.LENGTH_SHORT).show();
         } else {
             log.append("\n> " + res);
         }
     }
 
-    private void createMenuButton(String nama, int harga) {
-        if (menuButtons.containsKey(nama)) return;
+    private void addProductButton(String n, int h) {
+        if (productButtons.containsKey(n)) return;
         Button b = new Button(this);
-        b.setText(nama + "\n" + harga);
+        b.setText(n + "\n" + h);
         b.setOnClickListener(v -> {
-            total += harga;
-            totalView.setText("TOTAL: " + total);
-            log.append("\n[+] " + nama);
+            totalBelanja += h;
+            totalView.setText("Rp " + totalBelanja);
+            log.append("\n+ " + n);
         });
-        container.addView(b);
-        menuButtons.put(nama, b);
-        log.append("\n[OK] Tombol " + nama + " ditambahkan.");
+        productContainer.addView(b);
+        productButtons.put(n, b);
     }
 
-    private void removeMenuButton(String nama) {
-        if (menuButtons.containsKey(nama)) {
-            container.removeView(menuButtons.get(nama));
-            menuButtons.remove(nama);
-            log.append("\n[OK] Tombol " + nama + " dihapus.");
+    private void removeProductButton(String n) {
+        if (productButtons.containsKey(n)) {
+            productContainer.removeView(productButtons.get(n));
+            productButtons.remove(n);
         }
     }
 
-    private void generateReceipt() {
-        log.append("\n\n--- STRUK DIGITAL ODFIZ ---");
-        log.append("\nGrand Total: Rp " + total);
-        log.append("\nStok otomatis diperbarui...");
-        log.append("\n---------------------------\n");
-        total = 0;
-        totalView.setText("TOTAL: 0");
+    private void cetakStruk() {
+        log.append("\n\n--- ODFIZ PRINT OUT ---");
+        log.append("\nTotal Akhir: Rp " + totalBelanja);
+        log.append("\nStok Berkurang Otomatis.");
+        log.append("\n-----------------------\n");
+        resetTransaksi();
+    }
+
+    private void resetTransaksi() {
+        totalBelanja = 0;
+        totalView.setText("Rp 0");
+        log.append("\n[RESET] Siap melayani pelanggan baru.");
     }
 }

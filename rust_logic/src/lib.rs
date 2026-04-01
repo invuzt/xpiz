@@ -12,31 +12,23 @@ pub unsafe extern "system" fn Java_com_invuzt_xpiz_MainActivity_predictBestButto
         .expect("ERR").into();
     let input = input.trim().to_lowercase();
 
-    // 1. COMMAND: TAMBAH TOMBOL (Contoh: tambah dimsum : 15000)
-    if input.starts_with("tambah ") {
-        let clean = input[7..].trim();
-        if let Some((nama, harga)) = clean.split_once(':') {
-            return return_string(&mut env, &format!("CMD_ADD|{}|{}", nama.trim().to_uppercase(), harga.trim()));
-        }
+    // 1. Jika Input mengandung ":" berarti Tambah Produk Baru
+    if input.contains(':') {
+        let parts: Vec<&str> = input.split(':').collect();
+        return return_string(&mut env, &format!("ADD|{}|{}", parts[0].trim().to_uppercase(), parts[1].trim()));
     }
 
-    // 2. COMMAND: HAPUS TOMBOL (Contoh: hapus dimsum)
+    // 2. Jika Input Angka Murni berarti Nominal Uang Bayar
+    if let Ok(nominal) = input.parse::<f32>() {
+        return return_string(&mut env, &format!("CALC_CHANGE|{}", nominal));
+    }
+
+    // 3. Jika Input "hapus [nama]"
     if input.starts_with("hapus ") {
-        let nama = input[6..].trim().to_uppercase();
-        return return_string(&mut env, &format!("CMD_DEL|{}", nama));
+        return return_string(&mut env, &format!("DEL|{}", input[6..].trim().to_uppercase()));
     }
 
-    // 3. COMMAND: PRINT (Contoh: print atau struk)
-    if input == "print" || input == "struk" {
-        return return_string(&mut env, "CMD_PRINT");
-    }
-
-    // 4. AI ANALYTICS (Jika input angka saja untuk bayar)
-    if let Ok(val) = input.parse::<f32>() {
-        return return_string(&mut env, &format!("CMD_CASH|{}", val));
-    }
-
-    return_string(&mut env, "AI: Gunakan perintah 'tambah', 'hapus', atau 'print'.")
+    return_string(&mut env, "AI: Ketik 'Nama : Harga' untuk produk baru.")
 }
 
 fn return_string(env: &mut JNIEnv, s: &str) -> jstring {
