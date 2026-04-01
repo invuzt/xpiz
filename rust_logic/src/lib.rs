@@ -1,3 +1,6 @@
+// Tambahkan baris ini di paling atas lib.rs sebagai trigger
+// Last Update: 2026-04-01 14:30
+
 use jni::JNIEnv;
 use jni::objects::{JClass, JString};
 use jni::sys::{jstring};
