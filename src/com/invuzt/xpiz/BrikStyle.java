@@ -6,13 +6,13 @@ import android.view.*;
 import android.widget.*;
 
 public class BrikStyle {
-    public static final int CL_BG_OUTER = Color.parseColor("#F5F7F9"); 
+    // Ubah BG_OUTER jadi Hitam Pekat agar Fullscreen menyatu
+    public static final int CL_BG_OUTER = Color.parseColor("#081512"); 
     public static final int CL_BLACK    = Color.parseColor("#081512"); 
     public static final int CL_ACCENT   = Color.parseColor("#D0C9FF"); 
     public static final int CL_WHITE    = Color.parseColor("#FFFFFF");
     public static final int CL_DARK_CARD = Color.parseColor("#0A1D19");
 
-    // Rounding biasa
     public static GradientDrawable round(int color, int radius) {
         GradientDrawable gd = new GradientDrawable();
         gd.setColor(color);
@@ -20,7 +20,6 @@ public class BrikStyle {
         return gd;
     }
 
-    // Custom Rounding (Top Left, Top Right, Bottom Right, Bottom Left)
     public static GradientDrawable roundCorners(int color, float tl, float tr, float br, float bl) {
         float[] radii = {tl, tl, tr, tr, br, br, bl, bl};
         GradientDrawable gd = new GradientDrawable();

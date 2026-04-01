@@ -13,39 +13,37 @@ public class MainActivity extends Activity {
     private native String getHelloFromRust();
 
     private LinearLayout contentArea;
-    private TextView btnProg, btnTrain;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // Root Abu-abu (Outer)
+        // 1. ROOT FULLSCREEN (Hapus Padding)
         RelativeLayout root = new RelativeLayout(this);
         root.setBackgroundColor(CL_BG_OUTER);
-        root.setPadding(30, 30, 30, 30);
 
-        // Container Hitam Utama (Inner)
+        // 2. MAIN FRAME (Tanpa Rounding di Pinggir Luar agar Fullscreen)
         LinearLayout mainFrame = new LinearLayout(this);
         mainFrame.setOrientation(LinearLayout.VERTICAL);
-        mainFrame.setBackground(round(CL_BLACK, 110));
-        
-        RelativeLayout.LayoutParams lpFrame = new RelativeLayout.LayoutParams(-1, -1);
-        root.addView(mainFrame, lpFrame);
+        // Kita tetap beri warna hitam pekat
+        mainFrame.setBackgroundColor(CL_BLACK); 
+        root.addView(mainFrame, new RelativeLayout.LayoutParams(-1, -1));
 
-        // 1. Header (BRIK & Level)
+        // 3. HEADER (Sesuaikan Padding agar tidak terlalu mepet status bar)
         addBrikHeader(mainFrame);
 
-        // 2. Scrollable Content
+        // 4. SCROLL CONTENT
         ScrollView sv = new ScrollView(this);
         sv.setVerticalScrollBarEnabled(false);
         mainFrame.addView(sv);
 
         contentArea = new LinearLayout(this);
         contentArea.setOrientation(LinearLayout.VERTICAL);
-        contentArea.setPadding(40, 20, 40, 300);
+        // Beri padding samping agar konten tetap rapi di dalam
+        contentArea.setPadding(50, 20, 50, 300); 
         sv.addView(contentArea);
 
-        // 3. Bottom Navigation (Melayang)
+        // 5. BOTTOM NAV (Melayang Tetap Sama)
         addBottomNav(root);
 
         drawTrainingUI();
@@ -54,7 +52,8 @@ public class MainActivity extends Activity {
 
     private void addBrikHeader(LinearLayout p) {
         RelativeLayout h = new RelativeLayout(this);
-        h.setPadding(60, 70, 60, 40);
+        // Tambah padding top untuk notch/status bar (80-100px)
+        h.setPadding(60, 100, 60, 40);
         
         TextView logo = new TextView(this);
         logo.setText("BRIK®");
@@ -80,7 +79,7 @@ public class MainActivity extends Activity {
     private void drawTrainingUI() {
         contentArea.removeAllViews();
         
-        // Kotak Putih (Rhythm Match)
+        // Kartu Putih (Tetap dengan Rounding 100)
         for(int i=0; i<2; i++) {
             RelativeLayout card = new RelativeLayout(this);
             card.setPadding(60, 60, 60, 60);
@@ -100,7 +99,7 @@ public class MainActivity extends Activity {
             card.addView(arrow, lp);
 
             contentArea.addView(card);
-            space(contentArea, 15);
+            space(contentArea, 20);
         }
 
         space(contentArea, 10);
@@ -134,7 +133,7 @@ public class MainActivity extends Activity {
 
         space(contentArea, 40);
 
-        // Tombol START & VIEW
+        // TOMBOL AKSI
         LinearLayout actions = new LinearLayout(this);
         actions.setWeightSum(2);
         actions.addView(createActionButton("START GAME", CL_ACCENT, Color.BLACK));
@@ -158,8 +157,7 @@ public class MainActivity extends Activity {
 
     private TextView createActionButton(String txt, int bg, int tx) {
         TextView b = new TextView(this);
-        b.setText(txt);
-        b.setTextColor(tx);
+        b.setText(txt); b.setTextColor(tx);
         b.setGravity(Gravity.CENTER);
         b.setPadding(0, 50, 0, 50);
         b.setTypeface(Typeface.DEFAULT_BOLD);
