@@ -8,7 +8,7 @@ import android.widget.*;
 import static com.invuzt.xpiz.BrikStyle.*;
 
 public class MainActivity extends Activity {
-    // Load Library Rust
+    // Pastikan nama library sesuai dengan hasil build GitHub (biasanya hello)
     static { System.loadLibrary("hello"); }
     private native String getContentFromRust(int pageId);
 
@@ -22,38 +22,36 @@ public class MainActivity extends Activity {
         RelativeLayout root = new RelativeLayout(this);
         root.setBackgroundColor(BG);
 
-        // Logo
+        // Logo Atas
         TextView logo = new TextView(this);
         logo.setText(BRAND); logo.setTextSize(26); logo.setTextColor(PUTIH);
         logo.setPadding(60, 130, 0, 0);
         root.addView(logo);
 
-        // Wadah Konten
+        // Area isi konten
         contentArea = new LinearLayout(this);
         contentArea.setOrientation(LinearLayout.VERTICAL);
         contentArea.setPadding(60, 250, 60, 0);
         root.addView(contentArea);
 
         buatNavigasi(root);
-        bukaTraining(); // Default
+        bukaTraining(); // Halaman awal
         setContentView(root);
     }
 
-    // --- HALAMAN 1: AMBIL DARI RUST (ID 1) ---
     void bukaTraining() {
         contentArea.removeAllViews();
-        updateWarnaTombol(false, true, false);
-
+        updateTombol(false, true, false);
+        
         TextView t = new TextView(this);
         t.setText(getContentFromRust(1)); // Panggil Rust
         t.setTextColor(PUTIH); t.setTextSize(18);
         contentArea.addView(t);
     }
 
-    // --- HALAMAN 2: AMBIL DARI RUST (ID 2) ---
     void bukaProgress() {
         contentArea.removeAllViews();
-        updateWarnaTombol(true, false, false);
+        updateTombol(true, false, false);
 
         TextView t = new TextView(this);
         t.setText(getContentFromRust(2)); // Panggil Rust
@@ -61,24 +59,23 @@ public class MainActivity extends Activity {
         contentArea.addView(t);
     }
 
-    // --- HALAMAN 3: TULIS LANGSUNG DI JAVA ---
     void bukaAbout() {
         contentArea.removeAllViews();
-        updateWarnaTombol(false, false, true);
+        updateTombol(false, false, true);
 
         TextView t = new TextView(this);
-        t.setText("About " + BRAND + "\n\nBuild: 2026.04\nPlatform: Rust Hybrid\nLoc: Ponorogo");
+        t.setText("About " + BRAND + "\n\nBuild 2026\nPlatform: Rust-JNI\nPonorogo, Indonesia");
         t.setTextColor(PUTIH); t.setTextSize(18);
         contentArea.addView(t);
     }
 
-    void updateWarnaTombol(boolean isP, boolean isT, boolean isA) {
-        btnProg.setBackground(isP ? bulat(AKSEN, 80) : null);
-        btnProg.setTextColor(isP ? Color.BLACK : PUTIH);
-        btnTrain.setBackground(isT ? bulat(AKSEN, 80) : null);
-        btnTrain.setTextColor(isT ? Color.BLACK : PUTIH);
-        btnAbout.setBackground(isA ? bulat(AKSEN, 80) : null);
-        btnAbout.setTextColor(isA ? Color.BLACK : PUTIH);
+    void updateTombol(boolean p, boolean t, boolean a) {
+        btnProg.setBackground(p ? bulat(AKSEN, 80) : null);
+        btnProg.setTextColor(p ? Color.BLACK : PUTIH);
+        btnTrain.setBackground(t ? bulat(AKSEN, 80) : null);
+        btnTrain.setTextColor(t ? Color.BLACK : PUTIH);
+        btnAbout.setBackground(a ? bulat(AKSEN, 80) : null);
+        btnAbout.setTextColor(a ? Color.BLACK : PUTIH);
     }
 
     void buatNavigasi(RelativeLayout root) {

@@ -1,16 +1,17 @@
 use std::ffi::CString;
-use std::os::raw::c_char;
+use std::os::raw::{c_char, c_int};
 
 #[no_mangle]
 pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getContentFromRust(
     _env: *mut std::ffi::c_void,
     _class: *mut std::ffi::c_void,
-    page_id: i32,
+    page_id: c_int,
 ) -> *mut c_char {
     let content = match page_id {
-        1 => "TRAINING (RUST MODE):\n1. Rhythm\n2. Speed",
-        2 => "PROGRESS (RUST MODE):\nXP: 1000\nLevel: 10",
-        _ => "XPIZ Ready",
+        1 => "TRAINING (RUST MODE):\n\n1. Rhythm Match\n2. Speed Test\n3. Sequence Rush",
+        2 => "PROGRESS (RUST MODE):\n\nLevel: 71\nTotal XP: 4.500\nRank: Gold",
+        _ => "XPIZ System Ready",
     };
+    
     CString::new(content).unwrap().into_raw()
 }

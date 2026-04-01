@@ -2,6 +2,8 @@ package com.invuzt.xpiz;
 
 import android.graphics.*;
 import android.graphics.drawable.GradientDrawable;
+import android.view.*;
+import android.widget.*;
 
 public class BrikStyle {
     public static final String BRAND = "XPIZ®";
