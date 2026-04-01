@@ -10,3 +10,4 @@ crate-type = ["staticlib", "cdylib"]
 jni = "0.21.1"
 # Tambahkan library AI Smartcore
 smartcore = { version = "0.3.0", default-features = false }
+lazy_static = "1.4.0"
