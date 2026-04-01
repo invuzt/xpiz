@@ -1,7 +1,6 @@
 use jni::JNIEnv;
 use jni::objects::{JClass, JString};
 use jni::sys::{jstring};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 #[no_mangle]
 pub unsafe extern "system" fn Java_com_invuzt_xpiz_MainActivity_predictBestButton(
@@ -13,23 +12,24 @@ pub unsafe extern "system" fn Java_com_invuzt_xpiz_MainActivity_predictBestButto
         .expect("ERR").into();
     let input = input.trim().to_lowercase();
 
-    // Ambil Jam Lokal (Sederhana)
-    let total_secs = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-    let hour = ((total_secs / 3600) % 24) + 7; // Estimasi GMT+7 Ponorogo
-
-    // 1. DETEKSI SHIFT (PERSONALIA)
-    if input.chars().all(|c| c.is_alphabetic()) && input.len() > 1 {
-        let shift = if hour < 12 { "PAGI" } else { "SORE" };
-        return return_string(&mut env, &format!("AI_MODE: HRD|Presensi {} tercatat pada Shift {}. Semangat kerja!", input.to_uppercase(), shift));
-    }
-
-    // 2. DETEKSI STOK (INVENTORY)
+    // LOGIKA PERAMAL STOK (FORECASTING)
     let parts: Vec<&str> = input.split_whitespace().collect();
-    if parts.len() == 2 && parts[1].parse::<f32>().is_ok() {
-        return return_string(&mut env, &format!("AI_MODE: INVENTORY|Update stok {}: {}. Data waktu tersimpan.", parts[0], parts[1]));
+    if parts.len() == 2 {
+        if let Ok(stok) = parts[1].parse::<f32>() {
+            let item = parts[0];
+            // Simulasi AI: Asumsi rata-rata pemakaian 5 unit/hari
+            let sisa_hari = stok / 5.0; 
+            
+            return return_string(&mut env, &format!("AI_MODE: FORECAST|Stok {} sisa {}. Estimasi: HABIS DALAM {:.1} HARI.", item.to_uppercase(), stok, sisa_hari));
+        }
     }
 
-    return_string(&mut env, &format!("AI_MODE: ANALYTICS|Memproses data: {}. Jam operasional: {}:00", input, hour))
+    // LOGIKA ABSENSI (HANYA JIKA NAMA TUNGGAL)
+    if input.chars().all(|c| c.is_alphabetic()) {
+        return return_string(&mut env, &format!("AI_MODE: HRD|Presensi {} Berhasil. AI sedang memantau produktivitas harian.", input.to_uppercase()));
+    }
+
+    return_string(&mut env, "AI_MODE: LEARNING|Gunakan format 'barang angka' untuk ramalan stok.")
 }
 
 fn return_string(env: &mut JNIEnv, s: &str) -> jstring {
