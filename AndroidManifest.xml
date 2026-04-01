@@ -1,11 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.invuzt.xpiz">
-    <application android:hasCode="true" android:label="Odfiz Data Engine">
+    <application 
+        android:label="Odfiz POS" 
+        android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+        
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity 
+            android:name="com.invuzt.logic.CanvasActivity" 
+            android:label="Odfiz Node Designer" />
+            
     </application>
 </manifest>

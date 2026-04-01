@@ -2,13 +2,14 @@ package com.invuzt.xpiz;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Intent; // Kunci pindah halaman
 import android.os.*;
 import android.widget.*;
 import android.view.*;
 import android.graphics.*;
-import android.graphics.pdf.PdfDocument; // Import PDF
+import android.graphics.pdf.PdfDocument;
 import android.view.inputmethod.EditorInfo;
-import android.text.InputType; // Import InputType (Tadi ketinggalan)
+import android.text.InputType;
 import java.io.*;
 import java.util.*;
 import java.text.SimpleDateFormat;
@@ -17,7 +18,7 @@ public class MainActivity extends Activity {
     static { System.loadLibrary("hello"); }
     private native String predictBestButton(String cmd);
 
-    private LinearLayout productContainer, pageTerminal, pageLaporan, pageAbout;
+    private LinearLayout pageTerminal, pageLaporan, pageAbout;
     private TextView totalView, aiNotif, txtStruk, txtRekap;
     private int totalBelanja = 0, omset = 0, txCount = 0;
     private String currentReceipt = "";
@@ -30,18 +31,26 @@ public class MainActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.WHITE);
 
-        // --- TOOLBAR ---
         Toolbar toolbar = new Toolbar(this);
-        toolbar.setTitle("Odfiz POS v2.3");
+        toolbar.setTitle("Odfiz POS v2.5");
         toolbar.setBackgroundColor(Color.parseColor("#212121"));
         toolbar.setTitleTextColor(Color.WHITE);
+        
+        // Tambah Menu Node Designer
         toolbar.getMenu().add(0, 1, 0, "KASIR");
         toolbar.getMenu().add(0, 2, 0, "LAPORAN");
-        toolbar.getMenu().add(0, 3, 0, "TENTANG");
+        toolbar.getMenu().add(0, 3, 0, "DESIGN LOGIC"); // Menu Baru
+        toolbar.getMenu().add(0, 4, 0, "ABOUT");
+        
         toolbar.setOnMenuItemClickListener(item -> {
             if(item.getItemId() == 1) showPage(pageTerminal);
             if(item.getItemId() == 2) { updateLaporanText(); showPage(pageLaporan); }
-            if(item.getItemId() == 3) showPage(pageAbout);
+            if(item.getItemId() == 3) {
+                // PINDAH KE HALAMAN NODE
+                Intent intent = new Intent(this, com.invuzt.logic.CanvasActivity.class);
+                startActivity(intent);
+            }
+            if(item.getItemId() == 4) showPage(pageAbout);
             return true;
         });
         root.addView(toolbar);
@@ -62,116 +71,63 @@ public class MainActivity extends Activity {
         pageTerminal = new LinearLayout(this);
         pageTerminal.setOrientation(LinearLayout.VERTICAL);
         pageTerminal.setPadding(20,20,20,20);
-
         aiNotif = new TextView(this);
         aiNotif.setText("AI Odfiz: Standby");
-        aiNotif.setTextColor(Color.BLUE);
         pageTerminal.addView(aiNotif);
-
-        HorizontalScrollView h = new HorizontalScrollView(this);
-        productContainer = new LinearLayout(this);
-        h.addView(productContainer);
-        pageTerminal.addView(h);
 
         totalView = new TextView(this);
         totalView.setText("Rp 0");
         totalView.setTextSize(50);
         totalView.setGravity(Gravity.CENTER);
-        totalView.setTextColor(Color.RED);
         pageTerminal.addView(totalView);
 
         txtStruk = new TextView(this);
         txtStruk.setTypeface(Typeface.MONOSPACE);
-        txtStruk.setBackgroundColor(Color.parseColor("#F0F0F0"));
-        txtStruk.setPadding(30,30,30,30);
-        txtStruk.setHint("Preview Struk (Klik untuk Print)");
-        txtStruk.setOnClickListener(v -> saveAsPdf());
+        txtStruk.setBackgroundColor(Color.parseColor("#EEEEEE"));
+        txtStruk.setPadding(20,20,20,20);
+        txtStruk.setHint("Preview Struk...");
         pageTerminal.addView(txtStruk, new LinearLayout.LayoutParams(-1, 0, 1.0f));
 
-        // --- INPUT YANG DIKUNCI MATI ---
         EditText input = new EditText(this);
-        input.setHint("Ketik Nama:Harga atau Bayar...");
+        input.setHint("Input Nama:Harga atau Bayar");
         input.setSingleLine(true);
-        input.setLines(1);
-        input.setMaxLines(1);
-        input.setInputType(InputType.TYPE_CLASS_TEXT); // SEKARANG SUDAH ADA IMPORTNYA
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
         input.setImeOptions(EditorInfo.IME_ACTION_SEND);
-        
-        input.setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == EditorInfo.IME_ACTION_SEND || 
-                (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
-                String raw = input.getText().toString();
-                if(!raw.isEmpty()) {
-                    handleAiResult(predictBestButton(raw));
-                    input.setText(""); 
-                }
-                return true;
-            }
-            return false;
+        input.setOnEditorActionListener((v, id, ev) -> {
+            String res = predictBestButton(input.getText().toString());
+            handleAi(res);
+            input.setText("");
+            return true;
         });
         pageTerminal.addView(input);
     }
 
-    private void handleAiResult(String res) {
+    private void handleAi(String res) {
         String[] p = res.split("\\|");
-        if(p[0].equals("ADD")) addProduct(p[1], Integer.parseInt(p[2]));
-        else if(p[0].equals("PAY")) finalizeTransaction(Integer.parseInt(p[1]));
-        else if(p[0].equals("AI_MSG")) aiNotif.setText("AI: " + p[1]);
-        else if(p[0].equals("AI_WARN")) {
-            aiNotif.setText("PERINGATAN: " + p[2]);
-            aiNotif.setTextColor(Color.RED);
-        }
+        if(p[0].equals("ADD")) { totalBelanja += Integer.parseInt(p[2]); updateTotal(); }
+        else if(p[0].equals("PAY")) finalizePay(Integer.parseInt(p[1]));
     }
 
-    private void addProduct(String n, int h) {
-        Button b = new Button(this);
-        b.setText(n + "\n" + h);
-        b.setOnClickListener(v -> { 
-            totalBelanja += h; 
-            updateTotal(); 
-            predictBestButton("jual " + n); 
-        });
-        b.setOnLongClickListener(v -> { 
-            if(totalBelanja >= h) totalBelanja -= h; 
-            updateTotal(); 
-            return true; 
-        });
-        productContainer.addView(b);
-    }
-
-    private void finalizeTransaction(int bayar) {
-        int kembali = bayar - totalBelanja;
-        new AlertDialog.Builder(this)
-            .setTitle("KEMBALIAN")
-            .setMessage("Rp " + kembali)
-            .setPositiveButton("OK", null)
-            .show();
-
-        String date = new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date());
-        currentReceipt = "   ODFIZ POS\n" + date + "\n----------\nTOTAL: " + totalBelanja + "\nKEMBALI: " + kembali;
+    private void finalizePay(int b) {
+        new AlertDialog.Builder(this).setMessage("Kembali: " + (b - totalBelanja)).show();
+        currentReceipt = "TOTAL: " + totalBelanja;
         txtStruk.setText(currentReceipt);
-        
         omset += totalBelanja; txCount++; totalBelanja = 0; updateTotal();
     }
 
     private void initLaporanPage() {
         pageLaporan = new LinearLayout(this);
         pageLaporan.setOrientation(LinearLayout.VERTICAL);
-        pageLaporan.setPadding(40,40,40,40);
         txtRekap = new TextView(this);
-        txtRekap.setTextSize(24);
         pageLaporan.addView(txtRekap);
     }
 
-    private void updateLaporanText() {
-        txtRekap.setText("REKAP\n\nOmset: Rp " + omset + "\nNota: " + txCount);
-    }
+    private void updateLaporanText() { txtRekap.setText("Omset: " + omset); }
 
     private void initAboutPage() {
         pageAbout = new LinearLayout(this);
-        pageAbout.setGravity(Gravity.CENTER);
         TextView t = new TextView(this);
-        t.setText("Odfiz POS v2.3\nPonorogo Digital");
+        t.setText("Odfiz POS Logic Builder");
         pageAbout.addView(t);
     }
 
@@ -183,27 +139,4 @@ public class MainActivity extends Activity {
     }
 
     private void updateTotal() { totalView.setText("Rp " + totalBelanja); }
-
-    private void saveAsPdf() {
-        if(currentReceipt.isEmpty()) return;
-        PdfDocument doc = new PdfDocument(); // SEKARANG SUDAH ADA IMPORTNYA
-        PdfDocument.PageInfo pi = new PdfDocument.PageInfo.Builder(300, 500, 1).create();
-        PdfDocument.Page page = doc.startPage(pi);
-        Canvas canvas = page.getCanvas();
-        Paint p = new Paint();
-        p.setTextSize(14);
-        p.setTypeface(Typeface.MONOSPACE);
-        int y = 40;
-        for(String line : currentReceipt.split("\n")) {
-            canvas.drawText(line, 20, y, p);
-            y += 28;
-        }
-        doc.finishPage(page);
-        try {
-            File f = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Odfiz_Bill.pdf");
-            doc.writeTo(new FileOutputStream(f));
-            Toast.makeText(this, "PDF Tersimpan di Downloads!", Toast.LENGTH_SHORT).show();
-        } catch (Exception e) {}
-        doc.close();
-    }
 }
