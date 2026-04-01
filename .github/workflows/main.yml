@@ -12,14 +12,30 @@ jobs:
         with:
           targets: aarch64-linux-android
 
+      # Mekanisme Caching untuk Cargo & Target
+      - name: Cache Rust Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust_logic/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
       - name: Build Rust Logic
         run: |
           cd rust_logic
+          # Deteksi NDK secara otomatis
           NDK_PATH=$(ls -d $ANDROID_SDK_ROOT/ndk/* | tail -1)
           CLANG_PATH=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
           
-          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$CLANG_PATH           cargo build --target aarch64-linux-android --release
-
+          # Kompilasi ke Shared Library (.so)
+          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$CLANG_PATH \
+          cargo build --target aarch64-linux-android --release
+          
+          # Pindahkan hasil build ke folder lib Android
           mkdir -p ../lib/arm64-v8a
           cp target/aarch64-linux-android/release/libhello.so ../lib/arm64-v8a/
 
@@ -28,33 +44,37 @@ jobs:
           BUILD_TOOLS_PATH=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
           
-          # Hapus sisa build lama
           rm -rf obj/java classes.dex
           mkdir -p obj/java
           
-          # Kompilasi: Tambahkan flag -g agar debugging lebih mudah
-          # Kita compile BrikStyle.java DAN MainActivity.java sekaligus
+          # Compile semua file Java di package com.invuzt.xpiz
           javac -d obj/java -cp $PLATFORM_JAR src/com/invuzt/xpiz/*.java
           
-          # D8: Masukkan seluruh folder obj/java agar struktur package utuh
+          # Konversi class ke DEX (Dalvik Executable)
           $BUILD_TOOLS_PATH/d8 --release --lib $PLATFORM_JAR --output . $(find obj/java -name "*.class")
 
       - name: Assemble & Sign APK
         run: |
           BUILD_TOOLS_PATH=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
-
-          if [ ! -d "res" ]; then 
+          
+          # Pastikan folder res ada agar aapt tidak error
+          if [ ! -d "res" ]; then
             mkdir -p res/values
-            echo '<resources></resources>' > res/values/strings.xml
+            echo '<resources><string name="app_name">xpiz</string></resources>' > res/values/strings.xml
           fi
-
+          
+          # Packaging APK awal
           $BUILD_TOOLS_PATH/aapt package -f -M AndroidManifest.xml -I $PLATFORM_JAR -F xpiz-temp.apk -S res/
-
+          
+          # Masukkan DEX dan Native Library (.so) ke dalam APK
           zip -g xpiz-temp.apk classes.dex
           zip -g -r xpiz-temp.apk lib/
-
+          
+          # Generate keystore sementara untuk signing (Debug)
           keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=xpiz" || true
+          
+          # Signing APK agar bisa diinstall
           $BUILD_TOOLS_PATH/apksigner sign --ks debug.keystore --ks-pass pass:android --out xpiz.apk xpiz-temp.apk
 
       - name: Upload Artifact
