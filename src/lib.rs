@@ -10,7 +10,7 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getContentFromRust(
     let content = match page_id {
         1 => "LIST TRAINING DARI RUST:\n\n1. Finger Speed Test\n2. Rhythm Accuracy\n3. Memory Sequence",
         2 => "STATISTIK PROGRESS (RUST ENGINE):\n\nTotal XP: 12.540\nRank: Gold Master\nAccuracy: 98.5%",
-        _ => "Hello from Rust!",
+        _ => "XPIZ Ready!",
     };
     
     CString::new(content).unwrap().into_raw()
