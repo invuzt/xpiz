@@ -5,7 +5,7 @@ use jni::JNIEnv;
 use crate::ui::pages::AppPath;
 use crate::ui::styles;
 
-static mut NOTIF: &str = "71 LEVEL";
+static mut NOTIF: &str = "XPIZ READY";
 
 #[no_mangle]
 pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getSystemConfig(mut env: JNIEnv, _class: JClass, key: jstring) -> jstring {
@@ -21,27 +21,33 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getSystemConfig(mut env: JNI
 }
 
 #[no_mangle]
+pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getStyleConfig(env: JNIEnv, _class: JClass, id: jint) -> jstring {
+    // Logika warna navbar (ID 1=Training, 2=Progress)
+    let res = styles::get_nav_style(id <= 2);
+    env.new_string(res).unwrap().into_raw()
+}
+
+#[no_mangle]
 pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getContentFromRust(env: JNIEnv, _class: JClass, id: jint) -> jstring {
     let page = AppPath::from_id(id);
     env.new_string(page.get_content()).unwrap().into_raw()
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_handleTouch(mut env: JNIEnv, _class: JClass, label: jstring, input_val: jstring) -> jstring {
-    let tag: String = env.get_string(&unsafe { JString::from_raw(label) }).unwrap().into();
-    let val: String = env.get_string(&unsafe { JString::from_raw(input_val) }).unwrap().into();
+pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_handleTouch(mut env: JNIEnv, _class: JClass, tag: jstring, val: jstring) -> jstring {
+    let t: String = env.get_string(&unsafe { JString::from_raw(tag) }).unwrap().into();
+    let v: String = env.get_string(&unsafe { JString::from_raw(val) }).unwrap().into();
     
-    // Logika: Jika ada input, simpan ke Notif Header untuk pembuktian
-    let response = match tag.as_str() {
+    let response = match t.as_str() {
         "HEADER_CLICK" => "GOTO:99",
-        "BACK TO MENU" => "GOTO:1",
-        "START ENGINE" => {
-            if !val.is_empty() {
-                unsafe { NOTIF = Box::leak(format!("VAL: {}", val).into_boxed_str()); }
+        "SEND_INPUT" => {
+            if !v.is_empty() {
+                unsafe { NOTIF = Box::leak(format!("SENT: {}", v).into_boxed_str()); }
             }
             "REFRESH"
         },
-        "NOTIF_CLICK" => { unsafe { NOTIF = "SYNCED"; } "REFRESH" },
+        "BACK TO MENU" => "GOTO:1",
+        "NOTIF_CLICK" => { unsafe { NOTIF = "XPIZ SYNCED"; } "REFRESH" },
         _ => "NONE",
     };
     
