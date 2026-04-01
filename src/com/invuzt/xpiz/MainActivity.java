@@ -6,7 +6,6 @@ import android.widget.*;
 import android.view.*;
 import android.graphics.*;
 import android.view.inputmethod.EditorInfo;
-import java.util.HashMap;
 
 public class MainActivity extends Activity {
     static { System.loadLibrary("hello"); }
@@ -21,16 +20,14 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.parseColor("#121212"));
+        root.setBackgroundColor(Color.BLACK);
         root.setPadding(20, 20, 20, 20);
 
-        // 1. Area Tombol Produk
         HorizontalScrollView hScroll = new HorizontalScrollView(this);
         productContainer = new LinearLayout(this);
         hScroll.addView(productContainer);
         root.addView(hScroll);
 
-        // 2. Display Total
         totalView = new TextView(this);
         totalView.setText("Rp 0");
         totalView.setTextColor(Color.YELLOW);
@@ -38,12 +35,10 @@ public class MainActivity extends Activity {
         totalView.setGravity(Gravity.CENTER);
         root.addView(totalView);
 
-        // 3. Area Tombol Bayar AI
         payActionContainer = new LinearLayout(this);
         payActionContainer.setGravity(Gravity.CENTER);
         root.addView(payActionContainer);
 
-        // 4. Log Struk
         log = new TextView(this);
         log.setTextColor(Color.GREEN);
         log.setTypeface(Typeface.MONOSPACE);
@@ -51,41 +46,35 @@ public class MainActivity extends Activity {
         vScroll.addView(log);
         root.addView(vScroll, new LinearLayout.LayoutParams(-1, 0, 1.0f));
 
-        // 5. INPUT YANG SUDAH DI-FIX ENTER-NYA
         EditText input = new EditText(this);
-        input.setHint("Nama : Harga (Lalu Enter)");
-        input.setSingleLine(true); // INI BIAR GAK TURUN KE BAWAH
-        input.setImeOptions(EditorInfo.IME_ACTION_SEND); // GANTI ENTER JADI KIRIM
+        input.setHint("Ketik Nama:Harga atau Angka Bayar");
+        input.setSingleLine(true);
+        input.setImeOptions(EditorInfo.IME_ACTION_SEND);
         input.setTextColor(Color.WHITE);
         root.addView(input);
 
-        // Listener buat dengerin tombol Enter/Send
         input.setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == EditorInfo.IME_ACTION_SEND || 
-                (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
-                
+            if (actionId == EditorInfo.IME_ACTION_SEND || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
                 String txt = input.getText().toString();
                 if(!txt.isEmpty()){
-                    String res = predictBestButton(txt);
-                    handleRes(res);
-                    input.setText(""); // Bersihkan input
+                    handleOutput(predictBestButton(txt));
+                    input.setText("");
                 }
-                return true; // Bilang ke sistem: "Gak usah turun ke bawah!"
+                return true;
             }
             return false;
         });
-
         setContentView(root);
     }
 
-    private void handleRes(String res) {
+    private void handleOutput(String res) {
         String[] p = res.split("\\|");
         if (p[0].equals("ADD")) {
             makeBtn(p[1], Integer.parseInt(p[2]));
+        } else if (p[0].equals("PAY_CUSTOM")) {
+            finalizePrint((int)Float.parseFloat(p[1]));
         } else if (p[0].equals("SUGGEST")) {
-            // Logika Bayar AI
-        } else {
-            log.append("\n> " + res);
+            showSuggestedPay(res);
         }
     }
 
@@ -95,33 +84,40 @@ public class MainActivity extends Activity {
         b.setOnClickListener(v -> {
             totalBelanja += h;
             totalView.setText("Rp " + totalBelanja);
-            // Minta AI tebak duit bayar
-            String sug = predictBestButton("predict_pay|" + totalBelanja);
-            showPayButtons(sug);
+            handleOutput(predictBestButton("predict|" + totalBelanja));
         });
         b.setOnLongClickListener(v -> {
             if(totalBelanja >= h) totalBelanja -= h;
             totalView.setText("Rp " + totalBelanja);
+            handleOutput(predictBestButton("predict|" + totalBelanja));
             return true;
         });
         productContainer.addView(b);
     }
 
-    private void showPayButtons(String sug) {
+    private void showSuggestedPay(String sug) {
         payActionContainer.removeAllViews();
-        if(!sug.startsWith("SUGGEST")) return;
         String[] p = sug.split("\\|");
         for(int i=1; i<p.length; i++) {
             final int nominal = (int)Float.parseFloat(p[i]);
             Button b = new Button(this);
-            b.setText("BAYAR " + nominal);
-            b.setOnClickListener(v -> {
-                log.setText("\n=== STRUK ===\nTOTAL: " + totalBelanja + "\nBAYAR: " + nominal + "\nKEMBALI: " + (nominal-totalBelanja));
-                totalBelanja = 0;
-                totalView.setText("Rp 0");
-                payActionContainer.removeAllViews();
-            });
+            b.setText("Rp " + nominal);
+            b.setOnClickListener(v -> finalizePrint(nominal));
             payActionContainer.addView(b);
         }
+    }
+
+    private void finalizePrint(int bayar) {
+        int kembali = bayar - totalBelanja;
+        log.setText(""); // New Bill
+        log.append("\n=== ODFIZ STRUK ===");
+        log.append("\nTOTAL    : " + totalBelanja);
+        log.append("\nBAYAR    : " + bayar);
+        log.append("\nKEMBALI  : " + kembali);
+        log.append("\n====================");
+        
+        totalBelanja = 0;
+        totalView.setText("Rp 0");
+        payActionContainer.removeAllViews();
     }
 }
