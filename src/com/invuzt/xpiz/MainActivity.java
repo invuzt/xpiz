@@ -6,7 +6,9 @@ import android.os.*;
 import android.widget.*;
 import android.view.*;
 import android.graphics.*;
+import android.graphics.pdf.PdfDocument; // Import PDF
 import android.view.inputmethod.EditorInfo;
+import android.text.InputType; // Import InputType (Tadi ketinggalan)
 import java.io.*;
 import java.util.*;
 import java.text.SimpleDateFormat;
@@ -44,10 +46,10 @@ public class MainActivity extends Activity {
         });
         root.addView(toolbar);
 
-        // --- PAGES ---
         initTerminalPage();
         initLaporanPage();
         initAboutPage();
+        
         root.addView(pageTerminal);
         root.addView(pageLaporan);
         root.addView(pageAbout);
@@ -89,23 +91,21 @@ public class MainActivity extends Activity {
         // --- INPUT YANG DIKUNCI MATI ---
         EditText input = new EditText(this);
         input.setHint("Ketik Nama:Harga atau Bayar...");
-        input.setSingleLine(true); // Kunci 1: Baris tunggal
-        input.setLines(1);         // Kunci 2: Paksa cuma 1 baris
-        input.setMaxLines(1);      // Kunci 3: Maksimum 1 baris
-        input.setInputType(InputType.TYPE_CLASS_TEXT); // Kunci 4: Teks biasa, bukan multi-line
-        input.setImeOptions(EditorInfo.IME_ACTION_SEND); // Kunci 5: Ubah icon Enter jadi "Kirim"
+        input.setSingleLine(true);
+        input.setLines(1);
+        input.setMaxLines(1);
+        input.setInputType(InputType.TYPE_CLASS_TEXT); // SEKARANG SUDAH ADA IMPORTNYA
+        input.setImeOptions(EditorInfo.IME_ACTION_SEND);
         
         input.setOnEditorActionListener((v, actionId, event) -> {
-            // Kita cegah aksi Enter bawaan (turun ke bawah)
             if (actionId == EditorInfo.IME_ACTION_SEND || 
                 (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
-                
                 String raw = input.getText().toString();
                 if(!raw.isEmpty()) {
                     handleAiResult(predictBestButton(raw));
                     input.setText(""); 
                 }
-                return true; // Bilang ke Android: "Selesai, jangan tambah baris baru!"
+                return true;
             }
             return false;
         });
@@ -171,7 +171,7 @@ public class MainActivity extends Activity {
         pageAbout = new LinearLayout(this);
         pageAbout.setGravity(Gravity.CENTER);
         TextView t = new TextView(this);
-        t.setText("Odfiz POS v2.3\nPonorogo");
+        t.setText("Odfiz POS v2.3\nPonorogo Digital");
         pageAbout.addView(t);
     }
 
@@ -186,7 +186,7 @@ public class MainActivity extends Activity {
 
     private void saveAsPdf() {
         if(currentReceipt.isEmpty()) return;
-        PdfDocument doc = new PdfDocument();
+        PdfDocument doc = new PdfDocument(); // SEKARANG SUDAH ADA IMPORTNYA
         PdfDocument.PageInfo pi = new PdfDocument.PageInfo.Builder(300, 500, 1).create();
         PdfDocument.Page page = doc.startPage(pi);
         Canvas canvas = page.getCanvas();
@@ -202,7 +202,7 @@ public class MainActivity extends Activity {
         try {
             File f = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Odfiz_Bill.pdf");
             doc.writeTo(new FileOutputStream(f));
-            Toast.makeText(this, "PDF Tersimpan!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "PDF Tersimpan di Downloads!", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {}
         doc.close();
     }
