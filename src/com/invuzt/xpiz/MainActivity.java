@@ -8,7 +8,7 @@ import android.graphics.*;
 
 public class MainActivity extends Activity {
     static { System.loadLibrary("hello"); }
-    private native String predictBestButton(int id);
+    private native String predictBestButton(String cmd);
 
     private TextView terminalOutput;
     private EditText commandInput;
@@ -20,13 +20,12 @@ public class MainActivity extends Activity {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.BLACK);
-        root.setPadding(20, 20, 20, 20);
+        root.setPadding(20, 40, 20, 20);
 
         terminalOutput = new TextView(this);
         terminalOutput.setTextColor(Color.parseColor("#00FF41"));
-        terminalOutput.setTextSize(14);
         terminalOutput.setTypeface(Typeface.MONOSPACE);
-        terminalOutput.setText("--- ODFIZ XPIZ OS v1.1 [RUST_INSIGHTS] ---\n> Ready. Type 'xpiz --status' for data.\n\n");
+        terminalOutput.setText("--- XPIZ-LANG INTERPRETER v0.1 ---\n> SYSTEM_READY\n\n");
         
         scrollView = new ScrollView(this);
         scrollView.addView(terminalOutput);
@@ -35,67 +34,47 @@ public class MainActivity extends Activity {
         commandInput = new EditText(this);
         commandInput.setTextColor(Color.WHITE);
         commandInput.setHint("xpiz@admin:~$ ");
-        commandInput.setHintTextColor(Color.GRAY);
+        commandInput.setHintTextColor(Color.DKGRAY);
         commandInput.setBackgroundColor(Color.TRANSPARENT);
         commandInput.setTypeface(Typeface.MONOSPACE);
         commandInput.setSingleLine(true);
         root.addView(commandInput);
 
         commandInput.setOnEditorActionListener((v, actionId, event) -> {
-            String cmd = commandInput.getText().toString().trim().toLowerCase();
-            if (!cmd.isEmpty()) { handleCommand(cmd); commandInput.setText(""); }
+            String fullCmd = commandInput.getText().toString().trim();
+            if (!fullCmd.isEmpty()) {
+                appendToTerminal("\n$ " + fullCmd);
+                String res = predictBestButton(fullCmd);
+                if (res.startsWith("STATUS")) {
+                    handleStatus(res);
+                } else {
+                    appendToTerminal("\n" + res);
+                }
+                commandInput.setText("");
+            }
             return true;
         });
         setContentView(root);
     }
 
-    private void handleCommand(String cmd) {
-        appendToTerminal("\n$ " + cmd);
-        if (cmd.equals("xpiz --status")) {
-            String raw = predictBestButton(99); 
-            if (raw.startsWith("STATUS")) {
-                // Perbaikan di sini: Pakai double backslash untuk escape pipe
-                String[] parts = raw.split("\\|");
-                try {
-                    int k = Integer.parseInt(parts[1]);
-                    int s = Integer.parseInt(parts[2]);
-                    int t = Integer.parseInt(parts[3]);
-                    int total = Integer.parseInt(parts[4]);
-                    drawAsciiGraph(k, s, t, total);
-                } catch (Exception e) {
-                    appendToTerminal("\n[ERR]: Data corruption detected.");
-                }
-            }
-        } else if (cmd.equals("kopi")) { appendToTerminal("\n[AI]: " + predictBestButton(1)); }
-        else if (cmd.equals("sabun")) { appendToTerminal("\n[AI]: " + predictBestButton(2)); }
-        else if (cmd.equals("stok")) { appendToTerminal("\n[AI]: " + predictBestButton(3)); }
-        else if (cmd.equals("clear")) { terminalOutput.setText("--- TERMINAL WIPED ---"); }
-        else { appendToTerminal("\n[ERR]: Command not found."); }
+    private void handleStatus(String raw) {
+        String[] p = raw.split("\\|");
+        int k = Integer.parseInt(p[1]);
+        int s = Integer.parseInt(p[2]);
+        int t = Integer.parseInt(p[4]);
+        appendToTerminal("\n--- XPIZ-LANG ANALYTICS ---\nKOPI  [" + getBar(k, t) + "] " + k + "\nSABUN [" + getBar(s, t) + "] " + s + "\n---------------------------");
     }
 
-    private void drawAsciiGraph(int k, int s, int t, int total) {
-        String graph = "\n--- SYSTEM RESOURCE UTILIZATION ---\n";
-        // Hindari pembagian dengan nol
-        int div = total > 0 ? total : 1;
-        graph += "KOPI  [" + getBar(k, div) + "] " + (k*100/div) + "%\n";
-        graph += "SABUN [" + getBar(s, div) + "] " + (s*100/div) + "%\n";
-        graph += "STOK  [" + getBar(t, div) + "] " + (t*100/div) + "%\n";
-        graph += "-----------------------------------\n";
-        appendToTerminal(graph);
+    private String getBar(int v, int t) {
+        int len = 10;
+        int f = (v * len) / (t > 0 ? t : 1);
+        StringBuilder b = new StringBuilder();
+        for (int i=0; i<len; i++) b.append(i<f ? "█" : "░");
+        return b.toString();
     }
 
-    private String getBar(int val, int total) {
-        int length = 15;
-        int filled = (val * length) / total;
-        StringBuilder bar = new StringBuilder();
-        for (int i = 0; i < length; i++) {
-            if (i < filled) bar.append("█"); else bar.append("░");
-        }
-        return bar.toString();
-    }
-
-    private void appendToTerminal(String text) {
-        terminalOutput.append(text);
+    private void appendToTerminal(String t) {
+        terminalOutput.append(t);
         scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN));
     }
 }
