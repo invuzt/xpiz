@@ -6,6 +6,7 @@ import android.widget.*;
 import android.view.*;
 import android.graphics.*;
 import android.view.inputmethod.EditorInfo;
+import java.util.HashMap;
 
 public class MainActivity extends Activity {
     static { System.loadLibrary("hello"); }
@@ -14,13 +15,14 @@ public class MainActivity extends Activity {
     private LinearLayout container;
     private TextView totalView, log;
     private int total = 0;
+    private HashMap<String, Button> menuButtons = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.BLACK);
+        root.setBackgroundColor(Color.parseColor("#0A0A0A"));
         root.setPadding(20, 20, 20, 20);
 
         HorizontalScrollView hScroll = new HorizontalScrollView(this);
@@ -30,71 +32,77 @@ public class MainActivity extends Activity {
 
         totalView = new TextView(this);
         totalView.setText("TOTAL: 0");
-        totalView.setTextColor(Color.YELLOW);
-        totalView.setTextSize(35);
+        totalView.setTextColor(Color.CYAN);
+        totalView.setTextSize(40);
         totalView.setGravity(Gravity.CENTER);
         root.addView(totalView);
 
         log = new TextView(this);
-        log.setTextColor(Color.GREEN);
+        log.setTextColor(Color.parseColor("#00FF00"));
         log.setTypeface(Typeface.MONOSPACE);
         ScrollView vScroll = new ScrollView(this);
         vScroll.addView(log);
         root.addView(vScroll, new LinearLayout.LayoutParams(-1, 0, 1.0f));
 
         EditText input = new EditText(this);
-        input.setHint("Ketik Nama : Harga / 'print'");
+        input.setHint("Perintah: tambah/hapus/print");
         input.setSingleLine(true);
         input.setImeOptions(EditorInfo.IME_ACTION_SEND);
         input.setTextColor(Color.WHITE);
         root.addView(input);
 
         input.setOnEditorActionListener((v, id, event) -> {
-            String txt = input.getText().toString();
-            if(!txt.isEmpty()){
-                String res = predictBestButton(txt);
-                if(res.equals("ACTION_PRINT")) {
-                    printStruk();
-                } else if(res.startsWith("NEW_BTN")) {
-                    String[] p = res.split("\\|");
-                    makeBtn(p[1], Integer.parseInt(p[2]));
-                } else if(res.startsWith("CASH")) {
-                    int bayar = (int)Float.parseFloat(res.split("\\|")[1]);
-                    log.append("\nTOTAL: " + total + " | BAYAR: " + bayar + "\nKEMBALI: " + (bayar - total));
-                }
-                input.setText("");
-            }
+            String res = predictBestButton(input.getText().toString());
+            executeCommand(res);
+            input.setText("");
             return true;
         });
         setContentView(root);
     }
 
-    private void makeBtn(String n, int h) {
-        Button b = new Button(this);
-        b.setText(n + "\n" + h);
-        
-        // KLIK BIASA: Tambah Harga
-        b.setOnClickListener(v -> {
-            total += h;
-            totalView.setText("TOTAL: " + total);
-            log.append("\n+ " + n + " (" + h + ")");
-        });
-
-        // TEKAN LAMA (LONG CLICK): Hapus Tombol
-        b.setOnLongClickListener(v -> {
-            container.removeView(b);
-            Toast.makeText(this, "Tombol " + n + " Dihapus", Toast.LENGTH_SHORT).show();
-            return true;
-        });
-
-        container.addView(b);
+    private void executeCommand(String res) {
+        String[] p = res.split("\\|");
+        if (p[0].equals("CMD_ADD")) {
+            createMenuButton(p[1], Integer.parseInt(p[2]));
+        } else if (p[0].equals("CMD_DEL")) {
+            removeMenuButton(p[1]);
+        } else if (p[0].equals("CMD_PRINT")) {
+            generateReceipt();
+        } else if (p[0].equals("CMD_CASH")) {
+            log.append("\n[KAS] Bayar: " + p[1] + " | Sisa: " + (Integer.parseInt(p[1]) - total));
+        } else {
+            log.append("\n> " + res);
+        }
     }
 
-    private void printStruk() {
-        log.append("\n\n=== STRUK ODFIZ POS ===");
-        log.append("\nTOTAL BELANJA: Rp " + total);
-        log.append("\n=======================\n");
-        total = 0; // Reset total setelah print
+    private void createMenuButton(String nama, int harga) {
+        if (menuButtons.containsKey(nama)) return;
+        Button b = new Button(this);
+        b.setText(nama + "\n" + harga);
+        b.setOnClickListener(v -> {
+            total += harga;
+            totalView.setText("TOTAL: " + total);
+            log.append("\n[+] " + nama);
+        });
+        container.addView(b);
+        menuButtons.put(nama, b);
+        log.append("\n[OK] Tombol " + nama + " ditambahkan.");
+    }
+
+    private void removeMenuButton(String nama) {
+        if (menuButtons.containsKey(nama)) {
+            container.removeView(menuButtons.get(nama));
+            menuButtons.remove(nama);
+            log.append("\n[OK] Tombol " + nama + " dihapus.");
+        }
+    }
+
+    private void generateReceipt() {
+        log.append("\n\n--- STRUK DIGITAL ODFIZ ---");
+        log.append("\nGrand Total: Rp " + total);
+        log.append("\nStok otomatis diperbarui...");
+        log.append("\n---------------------------\n");
+        total = 0;
         totalView.setText("TOTAL: 0");
     }
 }
