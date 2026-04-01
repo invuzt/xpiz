@@ -10,7 +10,7 @@ clean:
 push:
 	@echo "Mengirim ke GitHub..."
 	git add .
-	git commit -m "style: apply brik ui and hello rust"
+	-git commit -m "style: apply brik ui and hello rust"
 	git push origin feature-ai-ui
 
 # 3. Sekali perintah: Bersihkan lalu Push
