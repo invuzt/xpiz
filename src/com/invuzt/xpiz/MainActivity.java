@@ -13,12 +13,12 @@ public class MainActivity extends Activity {
 
     private TextView terminalOutput;
     private EditText commandInput;
-    private ScrollView scroll;
-    private String nextAiPrediction = "NONE";
+    private String ghostText = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.BLACK);
@@ -27,33 +27,56 @@ public class MainActivity extends Activity {
         terminalOutput = new TextView(this);
         terminalOutput.setTextColor(Color.parseColor("#00FF41"));
         terminalOutput.setTypeface(Typeface.MONOSPACE);
-        terminalOutput.setText("--- XPIZ-LANG AI-ENGINE [STABLE_v1.2] ---\n\n");
+        terminalOutput.setText("--- ODFIZ XPIZ AI [GHOST_INPUT_ENABLED] ---\n\n");
         
-        scroll = new ScrollView(this);
+        ScrollView scroll = new ScrollView(this);
         scroll.addView(terminalOutput);
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1.0f));
+
+        // Area Input dengan tombol TAB
+        LinearLayout inputLayout = new LinearLayout(this);
+        inputLayout.setOrientation(LinearLayout.HORIZONTAL);
+        inputLayout.setBackgroundColor(Color.parseColor("#121212"));
 
         commandInput = new EditText(this);
         commandInput.setTextColor(Color.WHITE);
         commandInput.setHint("xpiz@admin:~$ ");
         commandInput.setHintTextColor(Color.DKGRAY);
-        commandInput.setBackgroundColor(Color.parseColor("#121212"));
+        commandInput.setBackgroundColor(Color.TRANSPARENT);
         commandInput.setTypeface(Typeface.MONOSPACE);
         commandInput.setSingleLine(true);
         
-        // FIX: Agar sugesti tidak hilang saat diterapkan
-        commandInput.setOnLongClickListener(v -> {
-            if (nextAiPrediction != null && !nextAiPrediction.equals("NONE")) {
-                commandInput.setText(nextAiPrediction);
-                // Paksa kursor ke paling kanan
-                commandInput.setSelection(commandInput.getText().length());
-                commandInput.requestFocus();
-                
-                // Beri getaran kecil atau toast sebagai tanda sukses
-                Toast.makeText(this, "🤖 AI Auto-Filled: " + nextAiPrediction, Toast.LENGTH_SHORT).show();
-                return true; // Menandakan event sudah ditangani
+        // Tombol TAB Modern
+        Button tabBtn = new Button(this);
+        tabBtn.setText("TAB");
+        tabBtn.setTextColor(Color.CYAN);
+        tabBtn.setBackgroundColor(Color.parseColor("#222222"));
+        tabBtn.setOnClickListener(v -> applyGhostText());
+
+        inputLayout.addView(commandInput, new LinearLayout.LayoutParams(0, -2, 1.0f));
+        inputLayout.addView(tabBtn, new LinearLayout.LayoutParams(150, -2));
+        root.addView(inputLayout);
+
+        // LOGIKA GHOST TEXT: Muncul saat mengetik
+        commandInput.addTextChangedListener(new TextWatcher() {
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                String input = s.toString().trim();
+                if (!input.isEmpty()) {
+                    // Tanya Rust: "Kalau saya ngetik ini, prediksinya apa?"
+                    String raw = predictBestButton(input);
+                    String[] parts = raw.split("\\|");
+                    if (parts.length >= 2 && !parts[1].equals("NONE")) {
+                        ghostText = parts[1];
+                        // Menampilkan petunjuk abu-abu di hint
+                        commandInput.setHint(input + " (" + ghostText + ")");
+                    } else {
+                        ghostText = "";
+                        commandInput.setHint("xpiz@admin:~$ ");
+                    }
+                }
             }
-            return false;
+            public void afterTextChanged(Editable s) {}
         });
 
         commandInput.setOnEditorActionListener((v, actionId, event) -> {
@@ -61,42 +84,25 @@ public class MainActivity extends Activity {
             if (!fullCmd.isEmpty()) {
                 execute(fullCmd);
                 commandInput.setText("");
+                commandInput.setHint("xpiz@admin:~$ ");
             }
             return true;
         });
 
-        root.addView(commandInput);
         setContentView(root);
+    }
+
+    private void applyGhostText() {
+        if (!ghostText.isEmpty()) {
+            commandInput.setText(ghostText);
+            commandInput.setSelection(ghostText.length());
+        }
     }
 
     private void execute(String cmd) {
         terminalOutput.append("\n$ " + cmd);
         String raw = predictBestButton(cmd);
-        
-        // Split data dari Rust (Response|Prediction)
         String[] parts = raw.split("\\|");
-        if (parts.length >= 2) {
-            String response = parts[0];
-            nextAiPrediction = parts[1];
-
-            if (response.startsWith("STATUS")) {
-                handleStatus(response);
-            } else {
-                terminalOutput.append("\n> " + response);
-            }
-
-            if (!nextAiPrediction.equals("NONE")) {
-                terminalOutput.append("\n[AI SUGGEST]: " + nextAiPrediction + " (Hold to use)");
-            }
-        }
-        
-        // Scroll otomatis ke bawah
-        scroll.post(() -> scroll.fullScroll(View.FOCUS_DOWN));
-    }
-
-    private void handleStatus(String raw) {
-        String[] p = raw.split("\\|");
-        // Logika bar chart ASCII seperti sebelumnya
-        terminalOutput.append("\n[SYS]: Analytics Ready.");
+        terminalOutput.append("\n> " + parts[0]);
     }
 }
