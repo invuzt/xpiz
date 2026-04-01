@@ -13,16 +13,14 @@ public class MainActivity extends Activity {
     private native String getHelloFromRust();
 
     private LinearLayout contentArea;
+    private TextView btnProg, btnTrain;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // --- IMMERSIVE STATUS BAR ---
         Window w = getWindow();
-        w.getDecorView().setSystemUiVisibility(
-            View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-        );
+        w.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
         w.setStatusBarColor(CL_BLACK);
 
         RelativeLayout root = new RelativeLayout(this);
@@ -33,7 +31,6 @@ public class MainActivity extends Activity {
         mainFrame.setBackgroundColor(CL_BLACK); 
         root.addView(mainFrame, new RelativeLayout.LayoutParams(-1, -1));
 
-        // Teks BRIK dinaikkan (Padding top 130px)
         addBrikHeader(mainFrame);
 
         ScrollView sv = new ScrollView(this);
@@ -42,12 +39,12 @@ public class MainActivity extends Activity {
 
         contentArea = new LinearLayout(this);
         contentArea.setOrientation(LinearLayout.VERTICAL);
-        contentArea.setPadding(50, 20, 50, 350); 
+        contentArea.setPadding(50, 20, 50, 400); 
         sv.addView(contentArea);
 
-        // Memanggil fungsi navigasi bawah
         addBottomNav(root);
 
+        // Default awal: Halaman Training
         drawTrainingUI();
         setContentView(root);
     }
@@ -55,133 +52,91 @@ public class MainActivity extends Activity {
     private void addBrikHeader(LinearLayout p) {
         RelativeLayout h = new RelativeLayout(this);
         h.setPadding(60, 130, 60, 40);
-        
         TextView logo = new TextView(this);
-        logo.setText("BRIK®");
-        logo.setTextSize(26);
-        logo.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        logo.setTextColor(Color.WHITE);
+        logo.setText("BRIK®"); logo.setTextSize(26); logo.setTextColor(Color.WHITE);
         h.addView(logo);
-
-        TextView lvl = new TextView(this);
-        lvl.setText("71 LEVEL");
-        lvl.setPadding(35, 15, 35, 15);
-        lvl.setBackground(round(CL_ACCENT, 45));
-        lvl.setTextColor(Color.BLACK);
-        lvl.setTextSize(12);
-        lvl.setTypeface(Typeface.DEFAULT_BOLD);
-        
-        RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(-2, -2);
-        lp.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
-        h.addView(lvl, lp);
         p.addView(h);
     }
 
+    // HALAMAN TRAINING (Isi lama)
     private void drawTrainingUI() {
         contentArea.removeAllViews();
-        for(int i=0; i<2; i++) {
-            RelativeLayout card = new RelativeLayout(this);
-            card.setPadding(60, 60, 60, 60);
-            card.setBackground(round(CL_WHITE, 100));
-            TextView t = new TextView(this);
-            t.setText("Rhythm match"); t.setTextColor(Color.BLACK); t.setTextSize(18);
-            card.addView(t);
-            TextView arrow = new TextView(this);
-            arrow.setText(">"); arrow.setTextColor(Color.GRAY);
-            RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(-2, -2);
-            lp.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
-            card.addView(arrow, lp);
-            contentArea.addView(card);
-            space(contentArea, 20);
-        }
-        space(contentArea, 10);
-        TextView rushH = new TextView(this);
-        rushH.setText("Sequence rush          v");
-        rushH.setPadding(60, 50, 60, 50);
-        rushH.setBackground(roundCorners(CL_DARK_CARD, 80, 80, 20, 20));
-        rushH.setTextColor(Color.WHITE);
-        contentArea.addView(rushH);
-        LinearLayout scoreBox = new LinearLayout(this);
-        scoreBox.setPadding(60, 40, 60, 60);
-        scoreBox.setBackgroundColor(CL_DARK_CARD);
-        scoreBox.setWeightSum(2);
-        scoreBox.addView(createScoreItem("Best score", "2,435"));
-        scoreBox.addView(createScoreItem("Reaction speed", "319 ms"));
-        contentArea.addView(scoreBox);
-        LinearLayout progBox = new LinearLayout(this);
-        progBox.setOrientation(LinearLayout.VERTICAL);
-        progBox.setPadding(60, 40, 60, 70);
-        progBox.setBackground(roundCorners(CL_DARK_CARD, 20, 20, 80, 80));
-        TextView progTitle = new TextView(this);
-        progTitle.setText("Your progress"); progTitle.setTextColor(Color.WHITE);
-        progBox.addView(progTitle);
-        contentArea.addView(progBox);
+        updateTabStyles(false); // Highlight tombol Training
+        
+        TextView title = new TextView(this);
+        title.setText("Daily Training"); title.setTextColor(Color.WHITE); title.setTextSize(24);
+        contentArea.addView(title);
         space(contentArea, 40);
-        LinearLayout actions = new LinearLayout(this);
-        actions.setWeightSum(2);
-        actions.addView(createActionButton("START GAME", CL_ACCENT, Color.BLACK));
-        actions.addView(createActionButton("VIEW LEADERS", Color.TRANSPARENT, Color.WHITE));
-        contentArea.addView(actions);
+        
+        // Contoh kartu putih dari BrikStyle
+        RelativeLayout card = new RelativeLayout(this);
+        card.setPadding(60, 60, 60, 60);
+        card.setBackground(round(CL_WHITE, 100));
+        TextView t = new TextView(this);
+        t.setText("Rhythm match"); t.setTextColor(Color.BLACK);
+        card.addView(t);
+        contentArea.addView(card);
     }
 
-    private View createScoreItem(String label, String val) {
-        LinearLayout l = new LinearLayout(this);
-        l.setOrientation(LinearLayout.VERTICAL);
-        l.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1));
-        TextView t1 = new TextView(this);
-        t1.setText(label); t1.setTextColor(Color.GRAY); t1.setTextSize(12);
-        l.addView(t1);
-        TextView t2 = new TextView(this);
-        t2.setText(val); t2.setTextColor(Color.WHITE); t2.setTextSize(26);
-        t2.setTypeface(Typeface.DEFAULT_BOLD);
-        l.addView(t2);
-        return l;
+    // HALAMAN PROGRESS (Isi Baru)
+    private void drawProgressUI() {
+        contentArea.removeAllViews();
+        updateTabStyles(true); // Highlight tombol Progress
+        
+        TextView title = new TextView(this);
+        title.setText("Your Statistics");
+        title.setTextColor(Color.WHITE);
+        title.setTextSize(24);
+        contentArea.addView(title);
+        space(contentArea, 40);
+
+        // Gunakan komponen stat card dari BrikStyle agar konsisten
+        contentArea.addView(createStatCard(contentArea, "Total Games", "128"));
+        space(contentArea, 20);
+        contentArea.addView(createStatCard(contentArea, "Win Rate", "84%"));
+        space(contentArea, 20);
+        contentArea.addView(createStatCard(contentArea, "Rust Logic", getHelloFromRust()));
     }
 
-    private TextView createActionButton(String txt, int bg, int tx) {
-        TextView b = new TextView(this);
-        b.setText(txt); b.setTextColor(tx);
-        b.setGravity(Gravity.CENTER);
-        b.setPadding(0, 50, 0, 50);
-        b.setTypeface(Typeface.DEFAULT_BOLD);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1);
-        lp.setMargins(10, 0, 10, 0);
-        b.setLayoutParams(lp);
-        if(bg == Color.TRANSPARENT) {
-            GradientDrawable gd = new GradientDrawable();
-            gd.setStroke(3, Color.GRAY);
-            gd.setCornerRadius(100);
-            b.setBackground(gd);
+    private void updateTabStyles(boolean isProgress) {
+        if (isProgress) {
+            btnProg.setBackground(round(CL_ACCENT, 80));
+            btnProg.setTextColor(Color.BLACK);
+            btnTrain.setBackground(null);
+            btnTrain.setTextColor(Color.WHITE);
         } else {
-            b.setBackground(round(bg, 100));
+            btnTrain.setBackground(round(CL_ACCENT, 80));
+            btnTrain.setTextColor(Color.BLACK);
+            btnProg.setBackground(null);
+            btnProg.setTextColor(Color.WHITE);
         }
-        return b;
     }
 
     private void addBottomNav(RelativeLayout root) {
         LinearLayout navWrap = new LinearLayout(this);
         navWrap.setBackground(round(Color.BLACK, 100));
         navWrap.setPadding(10, 10, 10, 10);
-        navWrap.setGravity(Gravity.CENTER);
 
-        TextView p = new TextView(this);
-        p.setText("PROGRESS");
-        p.setPadding(50, 30, 50, 30);
-        p.setTextColor(Color.WHITE);
-        navWrap.addView(p);
+        btnProg = new TextView(this);
+        btnProg.setText("PROGRESS");
+        btnProg.setPadding(50, 30, 50, 30);
+        btnProg.setOnClickListener(v -> drawProgressUI());
+        navWrap.addView(btnProg);
 
-        TextView t = new TextView(this);
-        t.setText("TRAINING");
-        t.setPadding(50, 30, 50, 30);
-        t.setBackground(round(CL_ACCENT, 80));
-        t.setTextColor(Color.BLACK);
-        t.setTypeface(Typeface.DEFAULT_BOLD);
-        navWrap.addView(t);
+        btnTrain = new TextView(this);
+        btnTrain.setText("TRAINING");
+        btnTrain.setPadding(50, 30, 50, 30);
+        btnTrain.setOnClickListener(v -> drawTrainingUI());
+        navWrap.addView(btnTrain);
 
         RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(-2, -2);
         lp.addRule(RelativeLayout.CENTER_HORIZONTAL);
         lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
         lp.setMargins(0, 0, 0, 60);
         root.addView(navWrap, lp);
+    }
+
+    private View createStatCard(ViewGroup p, String t, String v) {
+        return BrikStyle.createStatCard(p, t, v);
     }
 }
