@@ -2,21 +2,23 @@ use jni::objects::{JClass, JString};
 use jni::sys::{jint, jstring};
 use jni::JNIEnv;
 
-// State statis di Rust (Simulasi database/state sederhana)
+// State statis di Rust
 static mut NOTIF_TEXT: &str = "71 LEVEL";
 
 #[no_mangle]
 pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getSystemConfig(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
-    key: jstring,
+    key: jstring, // Ini adalah raw pointer
 ) -> jstring {
-    let k: String = env.get_string(&key.into()).unwrap().into();
+    // FIX: Bungkus raw pointer menjadi JString object
+    let j_key = unsafe { JString::from_raw(key) };
+    let k: String = env.get_string(&j_key).expect("Couldn't get java string!").into();
     
     let response = match k.as_str() {
         "LOGO" => "XPIZ®",
         "NOTIF" => unsafe { NOTIF_TEXT },
-        "NAVBAR" => "TRAINING|PROGRESS|SETTING", // Navbar dikirim sebagai string terpisah pipe
+        "NAVBAR" => "TRAINING|PROGRESS|SETTING",
         _ => "",
     };
     
@@ -42,11 +44,11 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getContentFromRust(
 pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_handleTouch(
     mut env: JNIEnv,
     _class: JClass,
-    input: JString,
+    input: jstring, // Gunakan jstring raw pointer untuk konsistensi
 ) -> jstring {
-    let clicked: String = env.get_string(&input).unwrap().into();
+    let j_input = unsafe { JString::from_raw(input) };
+    let clicked: String = env.get_string(&j_input).expect("Couldn't get java string!").into();
     
-    // Logika Reaksi: Mengubah Notifikasi di Header berdasarkan klik
     let res = match clicked.as_str() {
         "START ENGINE" => {
             unsafe { NOTIF_TEXT = "ENGINE ON"; }
