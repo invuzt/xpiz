@@ -10,47 +10,49 @@ struct XpizAI {
 }
 
 impl XpizAI {
-    // FUNGSI BARU: Membaca data dari 'Ingatan' HP
     fn load_memory() -> Self {
-        // Lokasi privat di Android (biasanya di data/data/com.invuzt.xpiz/files)
-        let path = "/data/data/com.invuzt.xpiz/files/xpiz_data.txt";
+        // Path absolut yang paling standar untuk internal app storage
+        let dir = "/data/data/com.invuzt.xpiz/files";
+        let path = format!("{}/xpiz_data.txt", dir);
         
-        if Path::new(path).exists() {
-            let data = fs::read_to_string(path).unwrap_or_default();
-            let parts: Vec<&str> = data.split(',').collect();
-            if parts.len() == 2 {
-                return XpizAI {
-                    xp: parts[0].parse().unwrap_or(4500),
-                    reaction: parts[1].parse().unwrap_or(240),
-                };
+        // PASTIKAN FOLDER ADA
+        let _ = fs::create_dir_all(dir);
+
+        if Path::new(&path).exists() {
+            if let Ok(data) = fs::read_to_string(&path) {
+                let parts: Vec<&str> = data.trim().split(',').collect();
+                if parts.len() == 2 {
+                    let saved_xp = parts[0].parse().unwrap_or(4500);
+                    let saved_re = parts[1].parse().unwrap_or(240);
+                    return XpizAI { xp: saved_xp, reaction: saved_re };
+                }
             }
         }
-        // Data Default kalau file belum ada
         XpizAI { xp: 4500, reaction: 240 }
     }
 
-    // FUNGSI BARU: Menyimpan data ke HP
     fn save_memory(&self) {
         let path = "/data/data/com.invuzt.xpiz/files/xpiz_data.txt";
         let content = format!("{},{}", self.xp, self.reaction);
+        // Pakai write biasa, kalau gagal ya sudah (tapi folder sudah dibuat di load)
         let _ = fs::write(path, content);
     }
 
     fn analyze(&mut self, id: i32) -> String {
-        // Simulasi: Setiap kali halaman dibuka, XP nambah 5 (Biar kelihatan Dinamis!)
-        self.xp += 5; 
-        self.save_memory(); // Simpan perubahan ke memory
+        // NAIKKAN XP TIAP KLIK (BUKTI DINAMIS)
+        self.xp += 10; 
+        self.save_memory(); 
 
         match id {
             1 => self.training_logic(),
             2 => self.progress_logic(),
-            _ => "XPIZ AI Standby".to_string(),
+            _ => "XPIZ Core Active".to_string(),
         }
     }
 
     fn training_logic(&self) -> String {
         format!(
-            "XPIZ AI TRAINING:\n            - Live Reaction: {}ms\n            - Status: Memory Active\n            - Forecast: Data Saved to Disk", 
+            "XPIZ AI TRAINING:\n            - React Speed: {}ms\n            - Storage: ONLINE\n            - Forecast: +10 XP Gained, 
             self.reaction
         )
     }
@@ -58,7 +60,7 @@ impl XpizAI {
     fn progress_logic(&self) -> String {
         let percent = (self.xp as f32 / 5000.0) * 100.0;
         format!(
-            "PERFORMANCE REPORT:\n            - Live XP: {}\n            - Accuracy: {:.1}%\n            - Forecast: Progress Synced", 
+            "PERFORMANCE REPORT:\n            - Total XP: {}\n            - Accuracy: {:.1}%\n            - Forecast: Syncing Memory...", 
             self.xp, percent
         )
     }
@@ -70,12 +72,8 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getContentFromRust(
     _class: JClass,
     page_id: jint,
 ) -> jstring {
-    // 1. Load data dari file (Memory)
     let mut ai = XpizAI::load_memory();
-    
-    // 2. Jalankan analisis (dan update data)
     let content = ai.analyze(page_id as i32);
-
     let output = env.new_string(content).expect("Gagal buat string");
     output.into_raw()
 }
