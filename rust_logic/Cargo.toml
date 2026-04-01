@@ -8,5 +8,6 @@ crate-type = ["staticlib"]
 
 [dependencies]
 jni = "0.21"
-# Library AI paling ringan untuk mobile
-tflite = "0.9.1" 
+# Serde buat manajemen data AI yang cepat
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

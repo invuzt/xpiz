@@ -2,22 +2,35 @@ use jni::objects::JClass;
 use jni::sys::{jint, jstring};
 use jni::JNIEnv;
 
-// Fungsi simulasi AI (Nanti bisa baca file .tflite di assets)
-fn hitung_ai_personal(id: i32) -> String {
-    let base_xp = 4500;
-    
-    match id {
-        1 => {
-            // Logika AI Training: Memberikan target dinamis
-            let target = 240 - 15;
-            format!("XPIZ AI PREDICTION:\n- Focus: Speed Reaction\n- Target: {}ms\n- Status: High Potential", target)
-        },
-        2 => {
-            // Logika AI Progress: Menghitung sisa level
-            let percent = (base_xp as f32 / 5000.0) * 100.0;
-            format!("AI PERFORMANCE REPORT:\n- Rank: ELITE\n- Efficiency: {:.1}%\n- Forecast: Level Up Soon", percent)
-        },
-        _ => "XPIZ System Stable".to_string(),
+struct XpizAI {
+    xp: i32,
+    reaction: i32,
+}
+
+impl XpizAI {
+    fn analyze(&self, id: i32) -> String {
+        match id {
+            1 => self.training_logic(),
+            2 => self.progress_logic(),
+            _ => "XPIZ System Active".to_string(),
+        }
+    }
+
+    fn training_logic(&self) -> String {
+        let prediction = self.reaction - 12;
+        format!(
+            "XPIZ AI ANALYTICS:\n            - Mode: Predictive\n            - Recommendation: Aggressive\n            - Target Speed: {}ms", 
+            prediction
+        )
+    }
+
+    fn progress_logic(&self) -> String {
+        let rank = if self.xp > 4000 { "ELITE" } else { "STARTER" };
+        let efficiency = (self.xp as f32 / 50.0).min(100.0);
+        format!(
+            "PERFORMANCE REPORT:\n            - Rank: {}\n            - Efficiency: {:.1}%\n            - Forecast: Level Up Ready", 
+            rank, efficiency
+        )
     }
 }
 
@@ -27,8 +40,9 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getContentFromRust(
     _class: JClass,
     page_id: jint,
 ) -> jstring {
-    // Memanggil fungsi AI di atas
-    let content = hitung_ai_personal(page_id as i32);
+    // Simulasi data yang nantinya bisa diambil dari storage
+    let ai = XpizAI { xp: 4500, reaction: 240 };
+    let content = ai.analyze(page_id as i32);
 
     let output = env.new_string(content).expect("Gagal buat string");
     output.into_raw()
