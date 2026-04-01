@@ -2,10 +2,20 @@ use jni::JNIEnv;
 use jni::objects::{JClass, JString};
 use jni::sys::{jstring};
 use std::sync::Mutex;
-use std::time::{SystemTime, UNIX_EPOCH};
+
+// Memori Pintar Odfiz
+struct OdfizState {
+    last_val: f32,
+    history: Vec<(String, f32)>, // (NamaBarang, Jumlah)
+    team: Vec<String>,
+}
 
 lazy_static::lazy_static! {
-    static ref DATA_POINTS: Mutex<Vec<(u64, f32)>> = Mutex::new(Vec::new());
+    static ref STATE: Mutex<OdfizState> = Mutex::new(OdfizState {
+        last_val: 0.0,
+        history: Vec::new(),
+        team: vec!["ajar".to_string(), "dendi".to_string(), "angga".to_string(), "heru".to_string(), "eko".to_string()],
+    });
 }
 
 #[no_mangle]
@@ -14,43 +24,38 @@ pub unsafe extern "system" fn Java_com_invuzt_xpiz_MainActivity_predictBestButto
     _class: JClass,
     input_java: jstring,
 ) -> jstring {
-    let j_obj = unsafe { jni::objects::JObject::from_raw(input_java) };
-    let j_str: &JString = &JString::from(j_obj);
-    let input: String = env.get_string(j_str).expect("ERR").into();
+    let j_str: String = env.get_string(&JString::from(unsafe { jni::objects::JObject::from_raw(input_java) }))
+        .expect("ERR").into();
+    let input = j_str.trim().to_lowercase();
+    let mut state = STATE.lock().unwrap();
+
+    // 1. LOGIKA IDENTIFIKASI (SIAPA/APA INI?)
     
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-    let mut data = DATA_POINTS.lock().unwrap();
+    // Cek apakah ini Tim?
+    if state.team.contains(&input) {
+        return return_string(&mut env, &format!("MODE: TIM|Sistem mencatat kehadiran {}. Status: AKTIF.", input.to_uppercase()));
+    }
 
-    // LOGIKA POWERFUL: Mendeteksi Angka & Tren
+    // Cek apakah ini Angka murni?
     if let Ok(val) = input.parse::<f32>() {
-        data.push((now, val));
-        if data.len() > 10 { data.remove(0); }
-        
-        // Algoritma Prediksi Sederhana (Trend Analysis)
-        if data.len() >= 2 {
-            let first = data[0];
-            let last = data[data.len()-1];
-            let diff_val = last.1 - first.1;
-            let diff_time = (last.0 - first.0) as f32;
-            let velocity = diff_val / (diff_time.max(1.0)); // Perubahan per detik
+        let diff = val - state.last_val;
+        state.last_val = val;
+        let trend = if diff >= 0.0 { "SURPLUS (+)" } else { "DEFISIT (-)" };
+        return return_string(&mut env, &format!("MODE: ANALISIS|Tren: {} {:.1}. Estimasi aman.", trend, diff.abs()));
+    }
 
-            let prediction = last.1 + (velocity * 3600.0); // Prediksi 1 jam ke depan
-            let status = if velocity > 0.0 { "MENINGKAT" } else { "MENURUN" };
-            
-            return return_string(&mut env, &format!("TREND: {} ({:.2}/sec)|PREDIKSI 1 JAM: {:.2}", status, velocity, prediction));
+    // Cek apakah ini Format "Barang Angka" (Contoh: solar 50)
+    let parts: Vec<&str> = input.split_whitespace().collect();
+    if parts.len() == 2 {
+        if let Ok(val) = parts[1].parse::<f32>() {
+            state.history.push((parts[0].to_string(), val));
+            return return_string(&mut env, &format!("MODE: LOGISTIK|Stok {} diperbarui ke {}. AI mulai menghitung pola...", parts[0], val));
         }
-        return return_string(&mut env, "DATA DICATAT|MEMBUTUHKAN LEBIH BANYAK DATA...");
     }
 
-    // Perintah Spesial: "xpiz --brain"
-    if input == "xpiz --brain" {
-        return return_string(&mut env, "BRAIN_ACTIVE|Sistem siap menganalisis tren stok & performa.");
-    }
-
-    return_string(&mut env, "INPUT BUKAN ANGKA|Gunakan angka untuk analisis tren.")
+    return_string(&mut env, "MODE: BELAJAR|Data baru disimpan. Terus input untuk meningkatkan akurasi AI.")
 }
 
 fn return_string(env: &mut JNIEnv, s: &str) -> jstring {
-    let output = env.new_string(s).expect("Gagal");
-    output.into_raw()
+    env.new_string(s).expect("Gagal").into_raw()
 }

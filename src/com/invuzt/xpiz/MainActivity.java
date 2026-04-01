@@ -11,71 +11,49 @@ public class MainActivity extends Activity {
     static { System.loadLibrary("hello"); }
     private native String predictBestButton(String cmd);
 
-    private TextView logView, trendView;
-    private EditText inputField;
-    private ScrollView scroll;
+    private TextView displayMode, logOutput;
+    private EditText input;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.parseColor("#0A0A0A"));
-        root.setPadding(40, 60, 40, 40);
+        root.setBackgroundColor(Color.BLACK);
+        root.setPadding(40, 40, 40, 40);
 
-        // Header
-        TextView header = new TextView(this);
-        header.setText("ODFIZ PREDICTIVE ENGINE v3.0");
-        header.setTextColor(Color.CYAN);
-        header.setTextSize(18);
-        header.setTypeface(Typeface.DEFAULT_BOLD);
-        root.addView(header);
+        displayMode = new TextView(this);
+        displayMode.setTextColor(Color.CYAN);
+        displayMode.setTextSize(14);
+        displayMode.setText("AI STATUS: READY");
+        root.addView(displayMode);
 
-        // Dashboard Trend
-        trendView = new TextView(this);
-        trendView.setBackgroundColor(Color.parseColor("#1A1A1A"));
-        trendView.setPadding(20, 20, 20, 20);
-        trendView.setTextColor(Color.YELLOW);
-        trendView.setText("TREND: WAITING FOR DATA...");
-        root.addView(trendView);
-
-        // Terminal Log
-        logView = new TextView(this);
-        logView.setTextColor(Color.parseColor("#00FF41"));
-        logView.setTypeface(Typeface.MONOSPACE);
+        logOutput = new TextView(this);
+        logOutput.setTextColor(Color.GREEN);
+        logOutput.setTypeface(Typeface.MONOSPACE);
+        logOutput.setTextSize(12);
         
-        scroll = new ScrollView(this);
-        scroll.addView(logView);
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(logOutput);
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1.0f));
 
-        // INPUT FIELD (FIXED ENTER)
-        inputField = new EditText(this);
-        inputField.setHint("Masukkan data angka...");
-        inputField.setTextColor(Color.WHITE);
-        inputField.setHintTextColor(Color.GRAY);
-        inputField.setSingleLine(true); // Gak bakal bisa kebawah lagi
-        inputField.setImeOptions(EditorInfo.IME_ACTION_SEND); // Tombol Enter jadi tombol "Kirim"
-        root.addView(inputField);
+        input = new EditText(this);
+        input.setSingleLine(true);
+        input.setTextColor(Color.WHITE);
+        input.setHint("Ketik: 'solar 50' atau 'Ajar'...");
+        input.setImeOptions(EditorInfo.IME_ACTION_SEND);
+        root.addView(input);
 
-        inputField.setOnEditorActionListener((v, actionId, event) -> {
-            // Cek apakah tombol yang ditekan adalah SEND atau ENTER
-            if (actionId == EditorInfo.IME_ACTION_SEND || 
-                actionId == EditorInfo.IME_ACTION_DONE || 
-                (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
-                
-                String in = inputField.getText().toString();
-                if(!in.isEmpty()){
-                    String res = predictBestButton(in);
-                    String[] p = res.split("\\|");
-                    trendView.setText(p[0]);
-                    logView.append("\n[IN]: " + in + " -> " + (p.length > 1 ? p[1] : "Calculating..."));
-                    inputField.setText(""); // Langsung kosongin buat input selanjutnya
-                    scroll.post(() -> scroll.fullScroll(View.FOCUS_DOWN));
-                }
-                return true; // Bilang ke sistem: "Enter sudah saya tangani, jangan bikin baris baru!"
+        input.setOnEditorActionListener((v, actionId, event) -> {
+            String txt = input.getText().toString();
+            if(!txt.isEmpty()){
+                String raw = predictBestButton(txt);
+                String[] parts = raw.split("\\|");
+                displayMode.setText(parts[0]);
+                logOutput.append("\n> " + (parts.length > 1 ? parts[1] : raw));
+                input.setText("");
             }
-            return false;
+            return true;
         });
 
         setContentView(root);
