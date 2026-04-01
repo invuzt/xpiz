@@ -6,33 +6,30 @@ import android.view.*;
 import android.widget.*;
 
 public class BrikStyle {
-    // Warna sesuai Gambar Brik
-    public static final int CL_BG_OUTER = Color.parseColor("#F5F5F5"); 
-    public static final int CL_BG_INNER = Color.parseColor("#000000"); 
+    public static final int CL_BG_OUTER = Color.parseColor("#F5F7F9"); 
+    public static final int CL_BLACK    = Color.parseColor("#081512"); 
     public static final int CL_ACCENT   = Color.parseColor("#D0C9FF"); 
-    public static final int CL_CARD_W   = Color.parseColor("#FFFFFF"); 
+    public static final int CL_WHITE    = Color.parseColor("#FFFFFF");
+    public static final int CL_DARK_CARD = Color.parseColor("#0A1D19");
 
-    // Helper Rounding
-    public static GradientDrawable drawRound(int color, int radius) {
+    // Rounding biasa
+    public static GradientDrawable round(int color, int radius) {
         GradientDrawable gd = new GradientDrawable();
         gd.setColor(color);
         gd.setCornerRadius(radius);
         return gd;
     }
 
-    // Custom Rounding (Top: 100px, Bottom: 30px) - Buat Sequence Rush
-    public static GradientDrawable drawHalfRound(int color, boolean topBig) {
-        float rB = 100f; float rS = 30f;
-        float[] radii = topBig ? 
-            new float[]{rB, rB, rB, rB, rS, rS, rS, rS} : 
-            new float[]{rS, rS, rS, rS, rB, rB, rB, rB};
+    // Custom Rounding (Top Left, Top Right, Bottom Right, Bottom Left)
+    public static GradientDrawable roundCorners(int color, float tl, float tr, float br, float bl) {
+        float[] radii = {tl, tl, tr, tr, br, br, bl, bl};
         GradientDrawable gd = new GradientDrawable();
         gd.setColor(color);
         gd.setCornerRadii(radii);
         return gd;
     }
 
-    public static void addSpace(LinearLayout l, int h) {
+    public static void space(LinearLayout l, int h) {
         View s = new View(l.getContext());
         l.addView(s, new LinearLayout.LayoutParams(-1, h));
     }
