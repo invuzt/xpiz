@@ -10,26 +10,22 @@ pub unsafe extern "system" fn Java_com_invuzt_xpiz_MainActivity_predictBestButto
 ) -> jstring {
     let input: String = env.get_string(&JString::from(unsafe { jni::objects::JObject::from_raw(input_java) }))
         .expect("ERR").into();
-    let input = input.trim().to_lowercase();
+    let input = input.trim();
 
-    // LOGIKA PERAMAL STOK (FORECASTING)
-    let parts: Vec<&str> = input.split_whitespace().collect();
-    if parts.len() == 2 {
-        if let Ok(stok) = parts[1].parse::<f32>() {
-            let item = parts[0];
-            // Simulasi AI: Asumsi rata-rata pemakaian 5 unit/hari
-            let sisa_hari = stok / 5.0; 
-            
-            return return_string(&mut env, &format!("AI_MODE: FORECAST|Stok {} sisa {}. Estimasi: HABIS DALAM {:.1} HARI.", item.to_uppercase(), stok, sisa_hari));
+    // LOGIKA KASIR MODULAR: "add btn Nama : Harga"
+    if input.to_lowercase().starts_with("add btn") {
+        let clean_input = input[7..].trim(); // Hapus "add btn"
+        if let Some((nama, harga)) = clean_input.split_once(':') {
+            return return_string(&mut env, &format!("CREATE_BTN|{}|{}", nama.trim(), harga.trim()));
         }
     }
 
-    // LOGIKA ABSENSI (HANYA JIKA NAMA TUNGGAL)
-    if input.chars().all(|c| c.is_alphabetic()) {
-        return return_string(&mut env, &format!("AI_MODE: HRD|Presensi {} Berhasil. AI sedang memantau produktivitas harian.", input.to_uppercase()));
+    // LOGIKA TRANSAKSI: Jika cuma angka (bayar)
+    if let Ok(bayar) = input.parse::<f32>() {
+        return return_string(&mut env, &format!("PAYMENT|{}", bayar));
     }
 
-    return_string(&mut env, "AI_MODE: LEARNING|Gunakan format 'barang angka' untuk ramalan stok.")
+    return_string(&mut env, "MODE: TERMINAL|Gunakan 'add btn Nama : Harga' untuk buat tombol.")
 }
 
 fn return_string(env: &mut JNIEnv, s: &str) -> jstring {
