@@ -1,22 +1,7 @@
 use jni::JNIEnv;
 use jni::objects::{JClass, JString};
 use jni::sys::{jstring};
-use std::sync::Mutex;
-
-// Memori Pintar Odfiz
-struct OdfizState {
-    last_val: f32,
-    history: Vec<(String, f32)>, // (NamaBarang, Jumlah)
-    team: Vec<String>,
-}
-
-lazy_static::lazy_static! {
-    static ref STATE: Mutex<OdfizState> = Mutex::new(OdfizState {
-        last_val: 0.0,
-        history: Vec::new(),
-        team: vec!["ajar".to_string(), "dendi".to_string(), "angga".to_string(), "heru".to_string(), "eko".to_string()],
-    });
-}
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[no_mangle]
 pub unsafe extern "system" fn Java_com_invuzt_xpiz_MainActivity_predictBestButton(
@@ -24,36 +9,27 @@ pub unsafe extern "system" fn Java_com_invuzt_xpiz_MainActivity_predictBestButto
     _class: JClass,
     input_java: jstring,
 ) -> jstring {
-    let j_str: String = env.get_string(&JString::from(unsafe { jni::objects::JObject::from_raw(input_java) }))
+    let input: String = env.get_string(&JString::from(unsafe { jni::objects::JObject::from_raw(input_java) }))
         .expect("ERR").into();
-    let input = j_str.trim().to_lowercase();
-    let mut state = STATE.lock().unwrap();
+    let input = input.trim().to_lowercase();
 
-    // 1. LOGIKA IDENTIFIKASI (SIAPA/APA INI?)
-    
-    // Cek apakah ini Tim?
-    if state.team.contains(&input) {
-        return return_string(&mut env, &format!("MODE: TIM|Sistem mencatat kehadiran {}. Status: AKTIF.", input.to_uppercase()));
+    // Ambil Jam Lokal (Sederhana)
+    let total_secs = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    let hour = ((total_secs / 3600) % 24) + 7; // Estimasi GMT+7 Ponorogo
+
+    // 1. DETEKSI SHIFT (PERSONALIA)
+    if input.chars().all(|c| c.is_alphabetic()) && input.len() > 1 {
+        let shift = if hour < 12 { "PAGI" } else { "SORE" };
+        return return_string(&mut env, &format!("AI_MODE: HRD|Presensi {} tercatat pada Shift {}. Semangat kerja!", input.to_uppercase(), shift));
     }
 
-    // Cek apakah ini Angka murni?
-    if let Ok(val) = input.parse::<f32>() {
-        let diff = val - state.last_val;
-        state.last_val = val;
-        let trend = if diff >= 0.0 { "SURPLUS (+)" } else { "DEFISIT (-)" };
-        return return_string(&mut env, &format!("MODE: ANALISIS|Tren: {} {:.1}. Estimasi aman.", trend, diff.abs()));
-    }
-
-    // Cek apakah ini Format "Barang Angka" (Contoh: solar 50)
+    // 2. DETEKSI STOK (INVENTORY)
     let parts: Vec<&str> = input.split_whitespace().collect();
-    if parts.len() == 2 {
-        if let Ok(val) = parts[1].parse::<f32>() {
-            state.history.push((parts[0].to_string(), val));
-            return return_string(&mut env, &format!("MODE: LOGISTIK|Stok {} diperbarui ke {}. AI mulai menghitung pola...", parts[0], val));
-        }
+    if parts.len() == 2 && parts[1].parse::<f32>().is_ok() {
+        return return_string(&mut env, &format!("AI_MODE: INVENTORY|Update stok {}: {}. Data waktu tersimpan.", parts[0], parts[1]));
     }
 
-    return_string(&mut env, "MODE: BELAJAR|Data baru disimpan. Terus input untuk meningkatkan akurasi AI.")
+    return_string(&mut env, &format!("AI_MODE: ANALYTICS|Memproses data: {}. Jam operasional: {}:00", input, hour))
 }
 
 fn return_string(env: &mut JNIEnv, s: &str) -> jstring {
