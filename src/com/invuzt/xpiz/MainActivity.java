@@ -9,105 +9,89 @@ import static com.invuzt.xpiz.BrikStyle.*;
 
 public class MainActivity extends Activity {
     static { System.loadLibrary("hello"); }
-    private native String getContentFromRust(int pageId);
-    
+    private native String getContentFromRust(int id);
     private LinearLayout contentArea;
-    private TextView btnProg, btnTrain, btnAbout;
+    private TextView bProg, bTrain;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
         RelativeLayout root = new RelativeLayout(this);
-        root.setBackgroundColor(BG);
+        root.setBackgroundColor(Color.parseColor("#F7F9F8")); // Background luar agak putih/abu
 
-        TextView logo = new TextView(this);
-        logo.setId(View.generateViewId());
-        logo.setText("XPIZ®");
-        logo.setTextSize(26);
-        logo.setTypeface(null, Typeface.BOLD);
-        logo.setTextColor(PUTIH);
-        logo.setPadding(60, 120, 0, 40);
-        root.addView(logo);
-
-        LinearLayout nav = buatNavigasi();
-        nav.setId(View.generateViewId());
-        RelativeLayout.LayoutParams navParams = new RelativeLayout.LayoutParams(-2, -2);
-        navParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
-        navParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
-        navParams.setMargins(0, 0, 0, 100);
-        root.addView(nav, navParams);
-
-        ScrollView scroll = new ScrollView(this);
-        RelativeLayout.LayoutParams scrollParams = new RelativeLayout.LayoutParams(-1, -1);
-        scrollParams.addRule(RelativeLayout.BELOW, logo.getId());
-        scrollParams.addRule(RelativeLayout.ABOVE, nav.getId());
-        scrollParams.setMargins(60, 20, 60, 20);
+        // 1. Container Utama (Gelap)
+        LinearLayout mainCard = new LinearLayout(this);
+        mainCard.setOrientation(LinearLayout.VERTICAL);
+        mainCard.setBackground(bulat(GELAP, 120));
+        mainCard.setPadding(40, 80, 40, 80);
         
+        RelativeLayout.LayoutParams mainParams = new RelativeLayout.LayoutParams(-1, -1);
+        mainParams.setMargins(20, 20, 20, 250); // Kasih ruang buat navbar bawah
+        root.addView(mainCard, mainParams);
+
+        // Logo
+        TextView logo = new TextView(this);
+        logo.setText("BRIK®");
+        logo.setTextSize(28);
+        logo.setTextColor(PUTIH);
+        logo.setPadding(40, 0, 0, 40);
+        mainCard.addView(logo);
+
+        // Area Konten (Hasil dari Rust)
         contentArea = new LinearLayout(this);
         contentArea.setOrientation(LinearLayout.VERTICAL);
-        scroll.addView(contentArea);
-        root.addView(scroll, scrollParams);
+        mainCard.addView(contentArea);
+
+        // 2. Navbar Bawah (Hitam)
+        LinearLayout nav = new LinearLayout(this);
+        nav.setBackground(bulat(Color.BLACK, 150));
+        nav.setPadding(20, 20, 20, 20);
+        nav.setGravity(Gravity.CENTER);
+
+        bProg = buatNavBtn(" PROGRESS ");
+        bTrain = buatNavBtn(" TRAINING ");
+        
+        bProg.setOnClickListener(v -> buka(2));
+        bTrain.setOnClickListener(v -> buka(1));
+
+        nav.addView(bProg);
+        nav.addView(bTrain);
+
+        RelativeLayout.LayoutParams navP = new RelativeLayout.LayoutParams(-2, -2);
+        navP.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+        navP.addRule(RelativeLayout.CENTER_HORIZONTAL);
+        navP.setMargins(0, 0, 0, 60);
+        root.addView(nav, navP);
 
         setContentView(root);
-        bukaTraining();
+        buka(1);
     }
 
-    private LinearLayout buatNavigasi() {
-        LinearLayout n = new LinearLayout(this);
-        n.setBackground(bulat(Color.BLACK, 100));
-        n.setPadding(20, 15, 20, 15);
-        
-        btnProg = buatTombol(" PROGRESS ");
-        btnTrain = buatTombol(" TRAINING ");
-        btnAbout = buatTombol("  •••  ");
-
-        btnProg.setOnClickListener(v -> bukaHalaman(2));
-        btnTrain.setOnClickListener(v -> bukaHalaman(1));
-        btnAbout.setOnClickListener(v -> bukaHalaman(3));
-
-        n.addView(btnProg);
-        n.addView(btnTrain);
-        n.addView(btnAbout);
-        return n;
-    }
-
-    private TextView buatTombol(String teks) {
+    private TextView buatNavBtn(String txt) {
         TextView tv = new TextView(this);
-        tv.setText(teks);
-        tv.setGravity(Gravity.CENTER);
-        tv.setPadding(40, 30, 40, 30);
+        tv.setText(txt);
+        tv.setPadding(60, 35, 60, 35);
         tv.setTypeface(null, Typeface.BOLD);
         return tv;
     }
 
-    void bukaHalaman(int id) {
+    void buka(int id) {
         contentArea.removeAllViews();
-        updateTombol(id);
-        
-        TextView t = new TextView(this);
-        t.setTextColor(PUTIH);
-        t.setTextSize(19);
-        t.setLineSpacing(10, 1.2f);
-        
-        if (id == 3) {
-            t.setText("XPIZ SYSTEM\n\nStatus: Online\nEngine: Rust Core\nUI: Java Dynamic");
-        } else {
-            t.setText(getContentFromRust(id));
-        }
-        contentArea.addView(t);
-    }
+        // Update Style Tombol Nav
+        bProg.setBackground(id == 2 ? bulat(AKSEN, 100) : null);
+        bProg.setTextColor(id == 2 ? Color.BLACK : Color.GRAY);
+        bTrain.setBackground(id == 1 ? bulat(AKSEN, 100) : null);
+        bTrain.setTextColor(id == 1 ? Color.BLACK : Color.GRAY);
 
-    void updateTombol(int activeId) {
-        btnProg.setBackground(activeId == 2 ? bulat(AKSEN, 80) : null);
-        btnProg.setTextColor(activeId == 2 ? Color.BLACK : PUTIH);
+        // Card dari Rust
+        TextView card = new TextView(this);
+        card.setText(getContentFromRust(id));
+        card.setBackground(card(PUTIH, Color.BLACK, 3)); // Card putih dengan border hitam
+        card.setPadding(60, 60, 60, 60);
+        card.setTextColor(Color.BLACK);
+        card.setTextSize(18);
         
-        btnTrain.setBackground(activeId == 1 ? bulat(AKSEN, 80) : null);
-        btnTrain.setTextColor(activeId == 1 ? Color.BLACK : PUTIH);
-        
-        btnAbout.setBackground(activeId == 3 ? bulat(AKSEN, 80) : null);
-        btnAbout.setTextColor(activeId == 3 ? Color.BLACK : PUTIH);
+        contentArea.addView(card);
     }
-    
-    void bukaTraining() { bukaHalaman(1); }
 }
