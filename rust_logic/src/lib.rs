@@ -15,7 +15,7 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getSystemConfig(mut env: JNI
     let res = match k.as_str() {
         "LOGO" => "XPIZ-AI",
         "NOTIF" => unsafe { NOTIF },
-        "NAVBAR" => "DASHBOARD|ANALYTICS|TOOLS",
+        "NAVBAR" => "AI-HOME|ANALYTICS", // Cuma 2 menu
         "COLOR_GELAP" => styles::GELAP,
         _ => "",
     };
@@ -33,7 +33,7 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getContentFromRust(env: JNIE
     unsafe { CURRENT_NAV_ID = id; }
     let input = unsafe { &LAST_INPUT };
     
-    // Jika di Nav 2 (Analytics), tampilkan metrik tanpa peduli input
+    // Nav 1: AI Home (Berdasarkan input) | Nav 2: Analytics (Statistik)
     let content = if id == 2 {
         AppPath::get_ai_menu("metrik")
     } else {
@@ -52,16 +52,13 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_handleTouch(mut env: JNIEnv,
         "SEND_INPUT" => {
             unsafe { 
                 LAST_INPUT = v.clone();
-                NOTIF = "AI SYNCED"; // Update status setelah proses
+                NOTIF = "AI LEARNED"; // Simulasi belajar
             }
         },
         "NAV_CLICK" => {
-            unsafe { 
-                CURRENT_NAV_ID = v.parse().unwrap_or(1);
-                NOTIF = "NAVIGATED";
-            }
+            unsafe { CURRENT_NAV_ID = v.parse().unwrap_or(1); }
         },
-        _ => { unsafe { NOTIF = "ACTION OK"; } }
+        _ => { unsafe { NOTIF = "EXECUTED"; } }
     };
     
     env.new_string("REFRESH").unwrap().into_raw()
