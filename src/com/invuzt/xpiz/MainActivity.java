@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.view.*;
 import android.view.inputmethod.EditorInfo;
 import android.widget.*;
+import java.io.File;
 import static com.invuzt.xpiz.BrikStyle.*;
 
 public class MainActivity extends Activity {
@@ -22,11 +23,18 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // PASTIKAN FOLDER INTERNAL TERSEDIA UNTUK RUST
+        File filesDir = getFilesDir();
+        if (!filesDir.exists()) {
+            filesDir.mkdirs();
+        }
+
         getWindow().setFlags(512, 512);
         RelativeLayout root = new RelativeLayout(this);
         root.setBackgroundColor(Color.parseColor(getSystemConfig("COLOR_GELAP")));
 
-        // Header
+        // 1. Header
         RelativeLayout header = new RelativeLayout(this);
         header.setId(View.generateViewId());
         header.setPadding(60, 150, 60, 40);
@@ -42,15 +50,16 @@ public class MainActivity extends Activity {
         tvLevel.setPadding(35, 12, 35, 12);
         tvLevel.setBackground(bulat(Color.parseColor("#D0C9FF"), 50));
         tvLevel.setTextColor(Color.BLACK);
+        tvLevel.setTypeface(null, Typeface.BOLD);
         RelativeLayout.LayoutParams lpL = new RelativeLayout.LayoutParams(-2,-2);
         lpL.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
         header.addView(tvLevel, lpL);
         root.addView(header);
 
-        // Input Box
+        // 2. Global Input
         globalInput = new EditText(this);
         globalInput.setId(View.generateViewId());
-        globalInput.setHint("Ask AI (try: 'cek ram' or 'tema oled')...");
+        globalInput.setHint("Train AI...");
         globalInput.setHintTextColor(Color.GRAY);
         globalInput.setTextColor(Color.CYAN);
         globalInput.setSingleLine(true);
@@ -61,7 +70,7 @@ public class MainActivity extends Activity {
             if (actionId == EditorInfo.IME_ACTION_SEND) {
                 handleTouch("SEND_INPUT", globalInput.getText().toString());
                 globalInput.setText("");
-                buka(1); // Refresh ke Home
+                buka(1);
                 return true;
             }
             return false;
@@ -71,7 +80,7 @@ public class MainActivity extends Activity {
         lpI.setMargins(40, 20, 40, 20);
         root.addView(globalInput, lpI);
 
-        // Content
+        // 3. Content Scroll
         ScrollView scroll = new ScrollView(this);
         contentArea = new LinearLayout(this);
         contentArea.setOrientation(1);
@@ -81,7 +90,7 @@ public class MainActivity extends Activity {
         lpS.addRule(RelativeLayout.BELOW, globalInput.getId());
         root.addView(scroll, lpS);
 
-        // Navbar
+        // 4. Navbar
         HorizontalScrollView ns = new HorizontalScrollView(this);
         ns.setBackground(bulat(Color.BLACK, 150));
         navContainer = new LinearLayout(this);
@@ -108,12 +117,9 @@ public class MainActivity extends Activity {
             b.setPadding(45, 25, 45, 25);
             b.setBackground(bulat(Color.parseColor(stl[0]), 100));
             b.setTextColor(Color.parseColor(stl[1]));
-            b.setOnClickListener(v -> {
-                handleTouch("NAV_CLICK", String.valueOf(pid));
-                buka(pid);
-            });
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2,-2);
-            lp.setMargins(10,0,10,0);
+            b.setOnClickListener(v -> buka(pid));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
+            lp.setMargins(10, 0, 10, 0);
             navContainer.addView(b, lp);
         }
     }
@@ -131,9 +137,10 @@ public class MainActivity extends Activity {
             card.setBackground(card(Color.parseColor("#1A1A1A"), 0, 0));
             card.setPadding(60, 60, 60, 60);
             card.setTextColor(Color.WHITE);
+            card.setTypeface(null, Typeface.BOLD);
             card.setOnClickListener(v -> {
                 handleTouch(labelTxt, "");
-                tvLevel.setText(getSystemConfig("NOTIF"));
+                buka(id); // Refresh state
             });
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
             lp.setMargins(0, 0, 0, 25);
