@@ -12,23 +12,26 @@ pub unsafe extern "system" fn Java_com_invuzt_xpiz_MainActivity_predictBestButto
         .expect("ERR").into();
     let input = input.trim().to_lowercase();
 
-    // 1. Jika Input mengandung ":" berarti Tambah Produk Baru
+    // Logika Prediksi Uang Bayar (AI Mode)
+    if input.starts_with("predict_pay|") {
+        let total: f32 = input[12..].parse().unwrap_or(0.0);
+        if total == 0.0 { return return_string(&mut env, "NONE"); }
+        
+        // AI menebak pecahan uang: misal 32rb -> sarankan 35rb, 40rb, 50rb, 100rb
+        let p1 = (total / 5000.0).ceil() * 5000.0;
+        let p2 = (total / 10000.0).ceil() * 10000.0;
+        let p3 = 50000.0;
+        let p4 = 100000.0;
+        
+        return return_string(&mut env, &format!("SUGGEST|{}|{}|{}|{}", p1, p2, p3, p4));
+    }
+
     if input.contains(':') {
         let parts: Vec<&str> = input.split(':').collect();
         return return_string(&mut env, &format!("ADD|{}|{}", parts[0].trim().to_uppercase(), parts[1].trim()));
     }
 
-    // 2. Jika Input Angka Murni berarti Nominal Uang Bayar
-    if let Ok(nominal) = input.parse::<f32>() {
-        return return_string(&mut env, &format!("CALC_CHANGE|{}", nominal));
-    }
-
-    // 3. Jika Input "hapus [nama]"
-    if input.starts_with("hapus ") {
-        return return_string(&mut env, &format!("DEL|{}", input[6..].trim().to_uppercase()));
-    }
-
-    return_string(&mut env, "AI: Ketik 'Nama : Harga' untuk produk baru.")
+    return_string(&mut env, "IDLE")
 }
 
 fn return_string(env: &mut JNIEnv, s: &str) -> jstring {
