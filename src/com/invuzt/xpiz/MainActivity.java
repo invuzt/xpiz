@@ -15,7 +15,8 @@ public class MainActivity extends Activity {
     private final int CL_CARD = Color.parseColor("#071D18"); 
     private final int CL_ACCENT = Color.parseColor("#D0C9FF"); 
 
-    private TextView txtRustMessage;
+    private LinearLayout mainContentArea;
+    private TextView btnProg, btnTrain;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,65 +28,13 @@ public class MainActivity extends Activity {
         ScrollView scrollView = new ScrollView(this);
         rootWrap.addView(scrollView);
 
-        LinearLayout content = new LinearLayout(this);
-        content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(50, 80, 50, 280); 
-        scrollView.addView(content);
+        // Kontainer Konten yang bisa diganti-ganti (Swappable)
+        mainContentArea = new LinearLayout(this);
+        mainContentArea.setOrientation(LinearLayout.VERTICAL);
+        mainContentArea.setPadding(50, 80, 50, 280); 
+        scrollView.addView(mainContentArea);
 
-        // --- HEADER ---
-        RelativeLayout header = new RelativeLayout(this);
-        content.addView(header);
-        TextView logo = new TextView(this);
-        logo.setText("BRIK®");
-        logo.setTextSize(30);
-        logo.setTypeface(Typeface.DEFAULT_BOLD);
-        logo.setTextColor(Color.BLACK);
-        header.addView(logo);
-
-        // --- WELCOME CARD ---
-        addSpacer(content, 60);
-        TextView welcome = new TextView(this);
-        welcome.setText("Odfiz,\nwelcome back");
-        welcome.setTextSize(24);
-        welcome.setTextColor(Color.WHITE);
-        welcome.setPadding(60, 70, 60, 70);
-        welcome.setBackground(createRounded(CL_CARD, 90));
-        content.addView(welcome);
-
-        // --- PROGRESS CARD ---
-        addSpacer(content, 15);
-        LinearLayout progressCard = new LinearLayout(this);
-        progressCard.setOrientation(LinearLayout.VERTICAL);
-        progressCard.setPadding(60, 60, 60, 60);
-        progressCard.setBackground(createRounded(CL_CARD, 90));
-        
-        TextView prog79 = new TextView(this);
-        prog79.setText("79%");
-        prog79.setTextColor(Color.WHITE);
-        prog79.setTextSize(40);
-        progressCard.addView(prog79);
-        content.addView(progressCard);
-
-        // --- RUST MESSAGE CARD ---
-        addSpacer(content, 50);
-        TextView achieveLabel = new TextView(this);
-        achieveLabel.setText("Rust Engine Status");
-        achieveLabel.setTextColor(Color.GRAY);
-        content.addView(achieveLabel);
-
-        addSpacer(content, 20);
-        LinearLayout rustCard = new LinearLayout(this);
-        rustCard.setPadding(60, 60, 60, 60);
-        rustCard.setBackground(createRounded(CL_CARD, 90));
-        
-        txtRustMessage = new TextView(this);
-        txtRustMessage.setText(getHelloFromRust());
-        txtRustMessage.setTextSize(18);
-        txtRustMessage.setTextColor(Color.WHITE);
-        rustCard.addView(txtRustMessage);
-        content.addView(rustCard);
-
-        // --- FLOATING NAV BAR (LOGIC ADDED) ---
+        // --- BOTTOM NAV BAR ---
         FrameLayout navWrap = new FrameLayout(this);
         navWrap.setBackground(createRounded(Color.BLACK, 100));
         navWrap.setPadding(10, 10, 10, 10);
@@ -93,50 +42,115 @@ public class MainActivity extends Activity {
         LinearLayout navContent = new LinearLayout(this);
         navContent.setGravity(Gravity.CENTER);
         
-        // Tombol Progress
-        TextView btnProg = new TextView(this);
+        btnProg = new TextView(this);
         btnProg.setText("PROGRESS");
         btnProg.setPadding(50, 30, 50, 30);
-        btnProg.setBackground(createRounded(CL_ACCENT, 80)); // Aktif pertama kali
-        btnProg.setTextColor(Color.BLACK);
-        btnProg.setClickable(true);
+        btnProg.setTypeface(Typeface.DEFAULT_BOLD);
         navContent.addView(btnProg);
         
-        // Tombol Training
-        TextView btnTrain = new TextView(this);
+        btnTrain = new TextView(this);
         btnTrain.setText("TRAINING");
         btnTrain.setPadding(50, 30, 50, 30);
-        btnTrain.setTextColor(Color.WHITE);
-        btnTrain.setClickable(true);
+        btnTrain.setTypeface(Typeface.DEFAULT_BOLD);
         navContent.addView(btnTrain);
         
         navWrap.addView(navContent);
 
-        // LOGIKA KLIK TOMBOL
-        btnProg.setOnClickListener(v -> {
-            btnProg.setBackground(createRounded(CL_ACCENT, 80));
-            btnProg.setTextColor(Color.BLACK);
-            btnTrain.setBackground(null);
-            btnTrain.setTextColor(Color.WHITE);
-            txtRustMessage.setText("Kembali ke Progress...");
-            Toast.makeText(this, "Halaman Progress", Toast.LENGTH_SHORT).show();
-        });
+        // LOGIKA PINDAH HALAMAN
+        btnProg.setOnClickListener(v -> showProgressPage());
+        btnTrain.setOnClickListener(v -> showTrainingPage());
 
-        btnTrain.setOnClickListener(v -> {
-            btnTrain.setBackground(createRounded(CL_ACCENT, 80));
-            btnTrain.setTextColor(Color.BLACK);
-            btnProg.setBackground(null);
-            btnProg.setTextColor(Color.WHITE);
-            txtRustMessage.setText("Mode Training Aktif!");
-            Toast.makeText(this, "Halaman Training", Toast.LENGTH_SHORT).show();
-        });
-
+        // Layout Nav Bar di bawah
         RelativeLayout.LayoutParams lpNav = new RelativeLayout.LayoutParams(-1, -2);
         lpNav.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
         lpNav.setMargins(60, 0, 60, 60);
         rootWrap.addView(navWrap, lpNav);
 
+        // Tampilan Awal
+        showProgressPage();
+
         setContentView(rootWrap);
+    }
+
+    // --- HALAMAN 1: PROGRESS ---
+    private void showProgressPage() {
+        updateNavState(true);
+        mainContentArea.removeAllViews();
+        
+        // Header
+        TextView logo = new TextView(this);
+        logo.setText("BRIK®");
+        logo.setTextSize(30);
+        logo.setTypeface(Typeface.DEFAULT_BOLD);
+        logo.setTextColor(Color.BLACK);
+        mainContentArea.addView(logo);
+
+        addSpacer(mainContentArea, 60);
+        
+        // Card Welcome
+        TextView card = new TextView(this);
+        card.setText("Odfiz,\nProgress Hari Ini");
+        card.setTextSize(24);
+        card.setTextColor(Color.WHITE);
+        card.setPadding(60, 80, 60, 80);
+        card.setBackground(createRounded(CL_CARD, 90));
+        mainContentArea.addView(card);
+        
+        addSpacer(mainContentArea, 20);
+        
+        // Info Status
+        TextView status = new TextView(this);
+        status.setText("Engine: Online\nTarget: Ponorogo");
+        status.setTextColor(Color.GRAY);
+        mainContentArea.addView(status);
+    }
+
+    // --- HALAMAN 2: TRAINING (DARI RUST) ---
+    private void showTrainingPage() {
+        updateNavState(false);
+        mainContentArea.removeAllViews();
+
+        TextView title = new TextView(this);
+        title.setText("Training Mode");
+        title.setTextSize(30);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setTextColor(Color.BLACK);
+        mainContentArea.addView(title);
+
+        addSpacer(mainContentArea, 60);
+
+        // Card dari Rust
+        TextView rustCard = new TextView(this);
+        rustCard.setText(getHelloFromRust());
+        rustCard.setTextSize(22);
+        rustCard.setTextColor(Color.BLACK);
+        rustCard.setPadding(60, 100, 60, 100);
+        rustCard.setBackground(createRounded(CL_ACCENT, 90));
+        rustCard.setGravity(Gravity.CENTER);
+        mainContentArea.addView(rustCard);
+        
+        addSpacer(mainContentArea, 30);
+        
+        TextView hint = new TextView(this);
+        hint.setText("Tekan PROGRESS untuk kembali.");
+        hint.setTextColor(Color.GRAY);
+        hint.setGravity(Gravity.CENTER);
+        mainContentArea.addView(hint);
+    }
+
+    // Update warna tombol navigasi
+    private void updateNavState(boolean isProgress) {
+        if (isProgress) {
+            btnProg.setBackground(createRounded(CL_ACCENT, 80));
+            btnProg.setTextColor(Color.BLACK);
+            btnTrain.setBackground(null);
+            btnTrain.setTextColor(Color.WHITE);
+        } else {
+            btnTrain.setBackground(createRounded(CL_ACCENT, 80));
+            btnTrain.setTextColor(Color.BLACK);
+            btnProg.setBackground(null);
+            btnProg.setTextColor(Color.WHITE);
+        }
     }
 
     private GradientDrawable createRounded(int color, int radius) {
