@@ -26,7 +26,7 @@ public class MainActivity extends Activity {
         terminalOutput.setTextColor(Color.parseColor("#00FF41"));
         terminalOutput.setTextSize(14);
         terminalOutput.setTypeface(Typeface.MONOSPACE);
-        terminalOutput.setText("--- ODFIZ XPIZ OS v1.1 [POWERED BY RUST] ---\n> Ready. Type 'xpiz --status' for insights.\n\n");
+        terminalOutput.setText("--- ODFIZ XPIZ OS v1.1 [RUST_INSIGHTS] ---\n> Ready. Type 'xpiz --status' for data.\n\n");
         
         scrollView = new ScrollView(this);
         scrollView.addView(terminalOutput);
@@ -52,10 +52,19 @@ public class MainActivity extends Activity {
     private void handleCommand(String cmd) {
         appendToTerminal("\n$ " + cmd);
         if (cmd.equals("xpiz --status")) {
-            String raw = predictBestButton(99); // Request data dari Rust
+            String raw = predictBestButton(99); 
             if (raw.startsWith("STATUS")) {
-                String[] parts = raw.split("\|");
-                drawAsciiGraph(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]), Integer.parseInt(parts[3]), Integer.parseInt(parts[4]));
+                // Perbaikan di sini: Pakai double backslash untuk escape pipe
+                String[] parts = raw.split("\\|");
+                try {
+                    int k = Integer.parseInt(parts[1]);
+                    int s = Integer.parseInt(parts[2]);
+                    int t = Integer.parseInt(parts[3]);
+                    int total = Integer.parseInt(parts[4]);
+                    drawAsciiGraph(k, s, t, total);
+                } catch (Exception e) {
+                    appendToTerminal("\n[ERR]: Data corruption detected.");
+                }
             }
         } else if (cmd.equals("kopi")) { appendToTerminal("\n[AI]: " + predictBestButton(1)); }
         else if (cmd.equals("sabun")) { appendToTerminal("\n[AI]: " + predictBestButton(2)); }
@@ -66,15 +75,17 @@ public class MainActivity extends Activity {
 
     private void drawAsciiGraph(int k, int s, int t, int total) {
         String graph = "\n--- SYSTEM RESOURCE UTILIZATION ---\n";
-        graph += "KOPI  [" + getBar(k, total) + "] " + (k*100/total) + "%\n";
-        graph += "SABUN [" + getBar(s, total) + "] " + (s*100/total) + "%\n";
-        graph += "STOK  [" + getBar(t, total) + "] " + (t*100/total) + "%\n";
+        // Hindari pembagian dengan nol
+        int div = total > 0 ? total : 1;
+        graph += "KOPI  [" + getBar(k, div) + "] " + (k*100/div) + "%\n";
+        graph += "SABUN [" + getBar(s, div) + "] " + (s*100/div) + "%\n";
+        graph += "STOK  [" + getBar(t, div) + "] " + (t*100/div) + "%\n";
         graph += "-----------------------------------\n";
         appendToTerminal(graph);
     }
 
     private String getBar(int val, int total) {
-        int length = 15; // Panjang bar
+        int length = 15;
         int filled = (val * length) / total;
         StringBuilder bar = new StringBuilder();
         for (int i = 0; i < length; i++) {
