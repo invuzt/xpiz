@@ -8,13 +8,20 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getContentFromRust(
     _class: JClass,
     page_id: jint,
 ) -> jstring {
-    
-    // Status Logic untuk UI (Tanpa File IO)
-    let response = match page_id {
-        1 => "TRAINING ACTIVE:\n- System: Online\n- Engine: Stable\n- Logic: Ready",
-        2 => "PROGRESS DATA:\n- Status: Monitoring\n- Interface: Connected",
-        _ => "XPIZ READY",
-    };
+    let mut response = String::new();
+
+    if page_id == 1 {
+        response.push_str("TRAINING ACTIVE\n");
+        response.push_str("Engine: v1.0-Rust\n");
+        response.push_str("Status: Running");
+    } else if page_id == 2 {
+        response.push_str("MONITORING SYSTEM\n");
+        response.push_str("Uptime: 120ms\n");
+        response.push_str("Threads: 4 Active\n");
+        response.push_str("Security: Verified"); // Baris tambahan!
+    } else {
+        response.push_str("XPIZ READY");
+    }
 
     env.new_string(response).unwrap().into_raw()
 }
