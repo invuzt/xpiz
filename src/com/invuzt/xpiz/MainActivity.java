@@ -2,28 +2,15 @@ package com.invuzt.xpiz;
 
 import android.app.Activity;
 import android.graphics.*;
-import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.*;
 import android.widget.*;
+import static com.invuzt.xpiz.BrikStyle.*;
 
 public class MainActivity extends Activity {
     static { System.loadLibrary("hello"); }
     private native String getContentFromRust(int pageId);
     
-    // --- CSS STYLE ---
-    static class Style {
-        static final int BG = Color.parseColor("#081512");
-        static final int AKSEN = Color.parseColor("#D0C9FF");
-        static final int PUTIH = Color.WHITE;
-        static GradientDrawable bulat(int warna, int radius) {
-            GradientDrawable gd = new GradientDrawable();
-            gd.setColor(warna);
-            gd.setCornerRadius(radius);
-            return gd;
-        }
-    }
-
     private LinearLayout contentArea;
     private TextView btnProg, btnTrain, btnAbout;
 
@@ -31,21 +18,18 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // Root Container
         RelativeLayout root = new RelativeLayout(this);
-        root.setBackgroundColor(Style.BG);
+        root.setBackgroundColor(BG);
 
-        // 1. Header (Logo)
         TextView logo = new TextView(this);
         logo.setId(View.generateViewId());
         logo.setText("XPIZ®");
         logo.setTextSize(26);
         logo.setTypeface(null, Typeface.BOLD);
-        logo.setTextColor(Style.PUTIH);
+        logo.setTextColor(PUTIH);
         logo.setPadding(60, 120, 0, 40);
         root.addView(logo);
 
-        // 2. Navigasi Bawah (Dibuat dulu supaya bisa jadi patokan)
         LinearLayout nav = buatNavigasi();
         nav.setId(View.generateViewId());
         RelativeLayout.LayoutParams navParams = new RelativeLayout.LayoutParams(-2, -2);
@@ -54,7 +38,6 @@ public class MainActivity extends Activity {
         navParams.setMargins(0, 0, 0, 100);
         root.addView(nav, navParams);
 
-        // 3. Area Konten (Di tengah antara Logo dan Navigasi)
         ScrollView scroll = new ScrollView(this);
         RelativeLayout.LayoutParams scrollParams = new RelativeLayout.LayoutParams(-1, -1);
         scrollParams.addRule(RelativeLayout.BELOW, logo.getId());
@@ -72,7 +55,7 @@ public class MainActivity extends Activity {
 
     private LinearLayout buatNavigasi() {
         LinearLayout n = new LinearLayout(this);
-        n.setBackground(Style.bulat(Color.BLACK, 100));
+        n.setBackground(bulat(Color.BLACK, 100));
         n.setPadding(20, 15, 20, 15);
         
         btnProg = buatTombol(" PROGRESS ");
@@ -103,12 +86,12 @@ public class MainActivity extends Activity {
         updateTombol(id);
         
         TextView t = new TextView(this);
-        t.setTextColor(Style.PUTIH);
+        t.setTextColor(PUTIH);
         t.setTextSize(19);
         t.setLineSpacing(10, 1.2f);
         
         if (id == 3) {
-            t.setText("XPIZ SYSTEM\n\nStatus: Online\nEngine: Rust Core\nUI: Java Dynamic\n\nBuild 2026.04");
+            t.setText("XPIZ SYSTEM\n\nStatus: Online\nEngine: Rust Core\nUI: Java Dynamic");
         } else {
             t.setText(getContentFromRust(id));
         }
@@ -116,14 +99,14 @@ public class MainActivity extends Activity {
     }
 
     void updateTombol(int activeId) {
-        btnProg.setBackground(activeId == 2 ? Style.bulat(Style.AKSEN, 80) : null);
-        btnProg.setTextColor(activeId == 2 ? Color.BLACK : Style.PUTIH);
+        btnProg.setBackground(activeId == 2 ? bulat(AKSEN, 80) : null);
+        btnProg.setTextColor(activeId == 2 ? Color.BLACK : PUTIH);
         
-        btnTrain.setBackground(activeId == 1 ? Style.bulat(Style.AKSEN, 80) : null);
-        btnTrain.setTextColor(activeId == 1 ? Color.BLACK : Style.PUTIH);
+        btnTrain.setBackground(activeId == 1 ? bulat(AKSEN, 80) : null);
+        btnTrain.setTextColor(activeId == 1 ? Color.BLACK : PUTIH);
         
-        btnAbout.setBackground(activeId == 3 ? Style.bulat(Style.AKSEN, 80) : null);
-        btnAbout.setTextColor(activeId == 3 ? Color.BLACK : Style.PUTIH);
+        btnAbout.setBackground(activeId == 3 ? bulat(AKSEN, 80) : null);
+        btnAbout.setTextColor(activeId == 3 ? Color.BLACK : PUTIH);
     }
     
     void bukaTraining() { bukaHalaman(1); }
