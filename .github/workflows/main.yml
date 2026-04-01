@@ -18,10 +18,8 @@ jobs:
           NDK_PATH=$(ls -d $ANDROID_SDK_ROOT/ndk/* | tail -1)
           CLANG_PATH=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
           
-          # Build .so dengan target Android
           CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$CLANG_PATH           cargo build --target aarch64-linux-android --release
 
-          # Buat folder jniLibs yang standar (arm64-v8a)
           mkdir -p ../lib/arm64-v8a
           cp target/aarch64-linux-android/release/libhello.so ../lib/arm64-v8a/
 
@@ -30,13 +28,9 @@ jobs:
           BUILD_TOOLS_PATH=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
           
-          # Bersihkan folder objek
           rm -rf obj/java && mkdir -p obj/java
-          
-          # Kompilasi semua file Java di package xpiz
           javac -d obj/java -cp $PLATFORM_JAR src/com/invuzt/xpiz/*.java
           
-          # D8: Bungkus semua class hasil find agar struktur folder package tetap utuh
           $BUILD_TOOLS_PATH/d8 --release --lib $PLATFORM_JAR --output . $(find obj/java -name "*.class")
 
       - name: Assemble & Sign APK
@@ -44,15 +38,21 @@ jobs:
           BUILD_TOOLS_PATH=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
 
-          # Buat resource dummy jika folder res kosong
-          if [ ! -d "res" ]; then mkdir -p empty_res; fi
-          $BUILD_TOOLS_PATH/aapt package -f -M AndroidManifest.xml -I $PLATFORM_JAR -F xpiz-temp.apk ${res_dir:-empty_res}
+          # --- FIX RESOURCE ERROR ---
+          # Jika folder res gak ada, buat folder kosong yang nyata
+          if [ ! -d "res" ]; then 
+            mkdir -p res/values
+            echo '<resources></resources>' > res/values/strings.xml
+          fi
 
-          # Masukkan DEX dan Library Native (.so)
+          # AAPT pake folder res yang sudah pasti ada
+          $BUILD_TOOLS_PATH/aapt package -f -M AndroidManifest.xml -I $PLATFORM_JAR -F xpiz-temp.apk -S res/
+
+          # Masukkan DEX dan JNI
           zip -g xpiz-temp.apk classes.dex
           zip -g -r xpiz-temp.apk lib/
 
-          # Signing APK
+          # Signing
           keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=xpiz" || true
           $BUILD_TOOLS_PATH/apksigner sign --ks debug.keystore --ks-pass pass:android --out xpiz.apk xpiz-temp.apk
 
