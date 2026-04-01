@@ -5,7 +5,6 @@ import android.os.*;
 import android.widget.*;
 import android.view.*;
 import android.graphics.*;
-import android.text.method.ScrollingMovementMethod;
 
 public class MainActivity extends Activity {
     static { System.loadLibrary("hello"); }
@@ -18,82 +17,70 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        // Root Layout (Deep Black)
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.BLACK);
         root.setPadding(20, 20, 20, 20);
 
-        // Terminal Output (Green Matrix Text)
         terminalOutput = new TextView(this);
         terminalOutput.setTextColor(Color.parseColor("#00FF41"));
         terminalOutput.setTextSize(14);
         terminalOutput.setTypeface(Typeface.MONOSPACE);
-        terminalOutput.setText("--- ODFIZ XPIZ OS v1.0 [OFFLINE_AI] ---\n> Type 'help' for commands\n\n");
+        terminalOutput.setText("--- ODFIZ XPIZ OS v1.1 [POWERED BY RUST] ---\n> Ready. Type 'xpiz --status' for insights.\n\n");
         
         scrollView = new ScrollView(this);
-        LinearLayout.LayoutParams scrollParams = new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f);
         scrollView.addView(terminalOutput);
-        root.addView(scrollView, scrollParams);
-
-        // Input Area
-        LinearLayout inputArea = new LinearLayout(this);
-        inputArea.setOrientation(LinearLayout.HORIZONTAL);
-        inputArea.setPadding(0, 20, 0, 0);
-
-        TextView prompt = new TextView(this);
-        prompt.setText("xpiz@admin:~$ ");
-        prompt.setTextColor(Color.WHITE);
-        prompt.setTypeface(Typeface.MONOSPACE);
-        inputArea.addView(prompt);
+        root.addView(scrollView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f));
 
         commandInput = new EditText(this);
-        commandInput.setBackgroundColor(Color.TRANSPARENT);
         commandInput.setTextColor(Color.WHITE);
+        commandInput.setHint("xpiz@admin:~$ ");
+        commandInput.setHintTextColor(Color.GRAY);
+        commandInput.setBackgroundColor(Color.TRANSPARENT);
         commandInput.setTypeface(Typeface.MONOSPACE);
-        commandInput.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEND);
         commandInput.setSingleLine(true);
-        LinearLayout.LayoutParams inputParams = new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        inputArea.addView(commandInput, inputParams);
+        root.addView(commandInput);
 
-        root.addView(inputArea);
-
-        // Event Listener (Enter Key)
         commandInput.setOnEditorActionListener((v, actionId, event) -> {
             String cmd = commandInput.getText().toString().trim().toLowerCase();
-            if (!cmd.isEmpty()) {
-                handleCommand(cmd);
-                commandInput.setText("");
-            }
+            if (!cmd.isEmpty()) { handleCommand(cmd); commandInput.setText(""); }
             return true;
         });
-
         setContentView(root);
     }
 
     private void handleCommand(String cmd) {
-        appendToTerminal("\n\n[USER]: " + cmd);
-        
-        String response;
-        if (cmd.equals("help")) {
-            response = "> Available commands:\n  - kopi  : Log coffee transaction\n  - sabun : Log soap transaction\n  - stok  : Check predictive stock\n  - clear : Wipe terminal";
-        } else if (cmd.equals("clear")) {
-            terminalOutput.setText("--- TERMINAL WIPED ---");
-            return;
-        } else if (cmd.contains("kopi")) {
-            response = predictBestButton(1);
-        } else if (cmd.contains("sabun")) {
-            response = predictBestButton(2);
-        } else if (cmd.contains("stok")) {
-            response = predictBestButton(3);
-        } else {
-            response = "> Error: Unknown command '" + cmd + "'";
-        }
+        appendToTerminal("\n$ " + cmd);
+        if (cmd.equals("xpiz --status")) {
+            String raw = predictBestButton(99); // Request data dari Rust
+            if (raw.startsWith("STATUS")) {
+                String[] parts = raw.split("\|");
+                drawAsciiGraph(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]), Integer.parseInt(parts[3]), Integer.parseInt(parts[4]));
+            }
+        } else if (cmd.equals("kopi")) { appendToTerminal("\n[AI]: " + predictBestButton(1)); }
+        else if (cmd.equals("sabun")) { appendToTerminal("\n[AI]: " + predictBestButton(2)); }
+        else if (cmd.equals("stok")) { appendToTerminal("\n[AI]: " + predictBestButton(3)); }
+        else if (cmd.equals("clear")) { terminalOutput.setText("--- TERMINAL WIPED ---"); }
+        else { appendToTerminal("\n[ERR]: Command not found."); }
+    }
 
-        appendToTerminal("\n[ODFIZ_AI]: " + response);
+    private void drawAsciiGraph(int k, int s, int t, int total) {
+        String graph = "\n--- SYSTEM RESOURCE UTILIZATION ---\n";
+        graph += "KOPI  [" + getBar(k, total) + "] " + (k*100/total) + "%\n";
+        graph += "SABUN [" + getBar(s, total) + "] " + (s*100/total) + "%\n";
+        graph += "STOK  [" + getBar(t, total) + "] " + (t*100/total) + "%\n";
+        graph += "-----------------------------------\n";
+        appendToTerminal(graph);
+    }
+
+    private String getBar(int val, int total) {
+        int length = 15; // Panjang bar
+        int filled = (val * length) / total;
+        StringBuilder bar = new StringBuilder();
+        for (int i = 0; i < length; i++) {
+            if (i < filled) bar.append("█"); else bar.append("░");
+        }
+        return bar.toString();
     }
 
     private void appendToTerminal(String text) {
