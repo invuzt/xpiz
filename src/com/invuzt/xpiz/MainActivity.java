@@ -5,8 +5,7 @@ import android.os.Bundle;
 import android.graphics.*;
 import android.graphics.drawable.GradientDrawable;
 import android.view.*;
-import android.view.inputmethod.InputMethodManager;
-import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.*;
 import android.widget.*;
 import android.text.InputType;
 
@@ -31,7 +30,6 @@ public class MainActivity extends Activity {
         content.setOrientation(LinearLayout.VERTICAL);
         content.setPadding(50, 80, 50, 0);
 
-        // Logo Brik
         TextView logo = new TextView(this);
         logo.setText("BRIK®");
         logo.setTextSize(30);
@@ -39,7 +37,6 @@ public class MainActivity extends Activity {
         logo.setTypeface(Typeface.DEFAULT_BOLD);
         content.addView(logo);
 
-        // Card Welcome (Radius Ekstrem)
         addSpacer(content, 60);
         TextView welcome = new TextView(this);
         welcome.setText("Odfiz,\nselamat datang kembali");
@@ -49,7 +46,6 @@ public class MainActivity extends Activity {
         welcome.setBackground(createRounded(Color.parseColor(CL_CARD), 90));
         content.addView(welcome);
 
-        // Card Omset
         addSpacer(content, 30);
         LinearLayout cardStat = new LinearLayout(this);
         cardStat.setPadding(60, 50, 60, 50);
@@ -62,7 +58,6 @@ public class MainActivity extends Activity {
         cardStat.addView(val);
         content.addView(cardStat);
 
-        // Input Display
         addSpacer(content, 60);
         txtInput = new TextView(this);
         txtInput.setText("TAP UNTUK INPUT...");
@@ -71,10 +66,7 @@ public class MainActivity extends Activity {
         content.addView(txtInput);
 
         rootWrap.addView(content);
-        
-        // Setup Hidden Input & Keyboard
         setupInputLogic(rootWrap);
-
         setContentView(rootWrap);
     }
 
@@ -82,7 +74,6 @@ public class MainActivity extends Activity {
         EditText hiddenEt = new EditText(this);
         hiddenEt.setInputType(InputType.TYPE_CLASS_TEXT);
         hiddenEt.setImeOptions(EditorInfo.IME_ACTION_SEND);
-        // Ukuran 1x1 biar gak kelihatan
         vg.addView(hiddenEt, new ViewGroup.LayoutParams(1, 1));
 
         vg.setOnClickListener(v -> {
