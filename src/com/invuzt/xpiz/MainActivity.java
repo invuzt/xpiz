@@ -5,7 +5,6 @@ import android.graphics.*;
 import android.os.Bundle;
 import android.view.*;
 import android.widget.*;
-import static com.invuzt.xpiz.BrikStyle.*;
 
 public class MainActivity extends Activity {
     static { System.loadLibrary("hello"); }
@@ -18,34 +17,26 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // 1. Layout Utama (Background Gelap)
         RelativeLayout root = new RelativeLayout(this);
-        root.setBackgroundColor(BG);
+        root.setBackgroundColor(BrikStyle.BG);
 
-        // 2. Judul/Logo Atas
         TextView logo = new TextView(this);
-        logo.setText(BRAND); 
+        logo.setText(BrikStyle.BRAND); 
         logo.setTextSize(24); 
-        logo.setTextColor(PUTIH);
+        logo.setTextColor(BrikStyle.PUTIH);
         logo.setPadding(60, 100, 0, 0);
         root.addView(logo);
 
-        // 3. Area Konten (Diatur agar tidak menutupi tombol)
         contentArea = new LinearLayout(this);
         contentArea.setOrientation(LinearLayout.VERTICAL);
         contentArea.setPadding(60, 300, 60, 300);
         
-        // ScrollView biar kalau teks Rust panjang bisa di-scroll
         ScrollView scroll = new ScrollView(this);
         scroll.addView(contentArea);
         root.addView(scroll);
 
-        // 4. Buat Navigasi (Harus dipanggil setelah contentArea agar variabelnya siap)
         buatNavigasi(root);
-
         setContentView(root);
-        
-        // Load halaman pertama
         bukaTraining();
     }
 
@@ -54,7 +45,7 @@ public class MainActivity extends Activity {
         updateTombol(false, true, false);
         TextView t = new TextView(this);
         t.setText(getContentFromRust(1));
-        t.setTextColor(PUTIH); t.setTextSize(20);
+        t.setTextColor(BrikStyle.PUTIH); t.setTextSize(20);
         contentArea.addView(t);
     }
 
@@ -63,7 +54,7 @@ public class MainActivity extends Activity {
         updateTombol(true, false, false);
         TextView t = new TextView(this);
         t.setText(getContentFromRust(2));
-        t.setTextColor(PUTIH); t.setTextSize(20);
+        t.setTextColor(BrikStyle.PUTIH); t.setTextSize(20);
         contentArea.addView(t);
     }
 
@@ -71,24 +62,24 @@ public class MainActivity extends Activity {
         contentArea.removeAllViews();
         updateTombol(false, false, true);
         TextView t = new TextView(this);
-        t.setText("XPIZ VERSION 1.0\n\nEngine: Rust 2021\nUI: Java Native\nLocation: Ponorogo");
-        t.setTextColor(PUTIH); t.setTextSize(18);
+        t.setText("XPIZ VERSION 1.0\n\nEngine: Rust 2021\nUI: Java Native");
+        t.setTextColor(BrikStyle.PUTIH); t.setTextSize(18);
         contentArea.addView(t);
     }
 
     void updateTombol(boolean p, boolean t, boolean a) {
         if(btnProg == null) return;
-        btnProg.setBackground(p ? bulat(AKSEN, 80) : null);
-        btnProg.setTextColor(p ? Color.BLACK : PUTIH);
-        btnTrain.setBackground(t ? bulat(AKSEN, 80) : null);
-        btnTrain.setTextColor(t ? Color.BLACK : PUTIH);
-        btnAbout.setBackground(a ? bulat(AKSEN, 80) : null);
-        btnAbout.setTextColor(a ? Color.BLACK : PUTIH);
+        btnProg.setBackground(p ? BrikStyle.bulat(BrikStyle.AKSEN, 80) : null);
+        btnProg.setTextColor(p ? Color.BLACK : BrikStyle.PUTIH);
+        btnTrain.setBackground(t ? BrikStyle.bulat(BrikStyle.AKSEN, 80) : null);
+        btnTrain.setTextColor(t ? Color.BLACK : BrikStyle.PUTIH);
+        btnAbout.setBackground(a ? BrikStyle.bulat(BrikStyle.AKSEN, 80) : null);
+        btnAbout.setTextColor(a ? Color.BLACK : BrikStyle.PUTIH);
     }
 
     void buatNavigasi(RelativeLayout root) {
         LinearLayout nav = new LinearLayout(this);
-        nav.setBackground(bulat(Color.BLACK, 100));
+        nav.setBackground(BrikStyle.bulat(Color.BLACK, 100));
         nav.setPadding(20, 10, 20, 10);
         nav.setGravity(Gravity.CENTER);
 
@@ -107,7 +98,6 @@ public class MainActivity extends Activity {
         btnAbout.setOnClickListener(v -> bukaAbout());
         nav.addView(btnAbout);
 
-        // Posisi Navigasi di bawah tengah
         RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(-2, -2);
         lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
         lp.addRule(RelativeLayout.CENTER_HORIZONTAL);
