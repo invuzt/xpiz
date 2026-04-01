@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.invuzt.xpiz">
-    <application android:label="Odfiz POS" android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+    <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34" />
+    <application 
+        android:hasCode="true" 
+        android:label="Odfiz POS"
+        android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
