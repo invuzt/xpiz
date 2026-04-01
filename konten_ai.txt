@@ -1,0 +1,370 @@
+
+--- FILE: ./.github/workflows/main.yml ---
+
+--- FILE: ./AndroidManifest.xml ---
+
+--- FILE: ./jni/hello.c ---
+
+--- FILE: ./jni/sound.c ---
+
+--- FILE: ./jni/sound.h ---
+
+--- FILE: ./res/values/strings.xml ---
+
+--- FILE: ./rust_logic/Cargo.toml ---
+
+--- FILE: ./rust_logic/src/lib.rs ---
+
+--- FILE: ./src/com/invuzt/xpiz/MainActivity.java ---
+
+--- FILE: ./src/com/invuzt/xpiz/BrikStyle.java ---
+name: Build xpiz Mobile
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Build Rust Logic
+        run: |
+          cd rust_logic
+          NDK_PATH=$(ls -d $ANDROID_SDK_ROOT/ndk/* | tail -1)
+          CLANG_PATH=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
+          
+          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$CLANG_PATH           cargo build --target aarch64-linux-android --release
+
+          mkdir -p ../lib/arm64-v8a
+          cp target/aarch64-linux-android/release/libhello.so ../lib/arm64-v8a/
+
+      - name: Compile Java & Create DEX
+        run: |
+          BUILD_TOOLS_PATH=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
+          PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
+          
+          # Hapus sisa build lama
+          rm -rf obj/java classes.dex
+          mkdir -p obj/java
+          
+          # Kompilasi: Tambahkan flag -g agar debugging lebih mudah
+          # Kita compile BrikStyle.java DAN MainActivity.java sekaligus
+          javac -d obj/java -cp $PLATFORM_JAR src/com/invuzt/xpiz/*.java
+          
+          # D8: Masukkan seluruh folder obj/java agar struktur package utuh
+          $BUILD_TOOLS_PATH/d8 --release --lib $PLATFORM_JAR --output . $(find obj/java -name "*.class")
+
+      - name: Assemble & Sign APK
+        run: |
+          BUILD_TOOLS_PATH=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
+          PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
+
+          if [ ! -d "res" ]; then 
+            mkdir -p res/values
+            echo '<resources></resources>' > res/values/strings.xml
+          fi
+
+          $BUILD_TOOLS_PATH/aapt package -f -M AndroidManifest.xml -I $PLATFORM_JAR -F xpiz-temp.apk -S res/
+
+          zip -g xpiz-temp.apk classes.dex
+          zip -g -r xpiz-temp.apk lib/
+
+          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=xpiz" || true
+          $BUILD_TOOLS_PATH/apksigner sign --ks debug.keystore --ks-pass pass:android --out xpiz.apk xpiz-temp.apk
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xpiz-Mobile-Build
+          path: xpiz.apk
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.invuzt.xpiz">
+    <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34" />
+    <application 
+        android:hasCode="true" 
+        android:label="xpiz" 
+        android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+        <activity android:name=".MainActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
+// File ini hanya pancingan untuk ndk-build
+#include <jni.h>
+#include <SLES/OpenSLES.h>
+#include <SLES/OpenSLES_Android.h>
+#include <stdint.h>
+#include "sound.h"
+
+SLObjectItf engineObj = NULL; SLEngineItf engineItf;
+SLObjectItf outputMixObj = NULL; SLObjectItf playerObj = NULL;
+SLPlayItf playerPlay; SLBufferQueueItf playerBufferQueue;
+
+// Data suara "BEEP" (1000 sample, frekuensi kotak)
+int16_t beep_buffer[4000]; 
+
+void init_sound() {
+    // 1. Create Engine
+    slCreateEngine(&engineObj, 0, NULL, 0, NULL, NULL);
+    (*engineObj)->Realize(engineObj, SL_BOOLEAN_FALSE);
+    (*engineObj)->GetInterface(engineObj, SL_IID_ENGINE, &engineItf);
+    
+    // 2. Create Output Mix
+    (*engineItf)->CreateOutputMix(engineItf, &outputMixObj, 0, NULL, NULL);
+    (*outputMixObj)->Realize(outputMixObj, SL_BOOLEAN_FALSE);
+
+    // 3. Setup Audio Source (Buffer Queue) & Sink
+    SLDataLocator_AndroidSimpleBufferQueue loc_bufq = {SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE, 2};
+    SLDataFormat_PCM format_pcm = {SL_DATAFORMAT_PCM, 1, SL_SAMPLINGRATE_44_1,
+        SL_PCMSAMPLEFORMAT_FIXED_16, SL_PCMSAMPLEFORMAT_FIXED_16,
+        SL_SPEAKER_FRONT_CENTER, SL_BYTEORDER_LITTLEENDIAN};
+    SLDataSource audioSrc = {&loc_bufq, &format_pcm};
+
+    SLDataLocator_OutputMix loc_outmix = {SL_DATALOCATOR_OUTPUTMIX, outputMixObj};
+    SLDataSink audioSnk = {&loc_outmix, NULL};
+
+    // 4. Create Player
+    const SLInterfaceID ids[1] = {SL_IID_BUFFERQUEUE};
+    const SLboolean req[1] = {SL_BOOLEAN_TRUE};
+    (*engineItf)->CreateAudioPlayer(engineItf, &playerObj, &audioSrc, &audioSnk, 1, ids, req);
+    (*playerObj)->Realize(playerObj, SL_BOOLEAN_FALSE);
+    (*playerObj)->GetInterface(playerObj, SL_IID_PLAY, &playerPlay);
+    (*playerObj)->GetInterface(playerObj, SL_IID_BUFFERQUEUE, &playerBufferQueue);
+    
+    (*playerPlay)->SetPlayState(playerPlay, SL_PLAYSTATE_PLAYING);
+
+    // 5. Generate Suara Beep (Gelombang Kotak/Square Wave)
+    for(int i=0; i<4000; i++) {
+        beep_buffer[i] = (i % 100 < 50) ? 5000 : -5000; // Frekuensi rendah (Bass)
+    }
+}
+
+void play_crash_sound() {
+    if (playerBufferQueue) {
+        // Masukkan data suara ke antrean speaker
+        (*playerBufferQueue)->Clear(playerBufferQueue);
+        (*playerBufferQueue)->Enqueue(playerBufferQueue, beep_buffer, sizeof(beep_buffer));
+    }
+}
+#ifndef SOUND_H
+#define SOUND_H
+
+void init_sound();
+void play_crash_sound();
+
+// Fungsi stok dari Rust
+void tambah_stok();
+void kurangi_stok();
+int get_stok();
+
+#endif
+<resources>
+    <string name="app_name">Odfiz Micro</string>
+</resources>
+[package]
+name = "rust_logic"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "hello"
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+jni = "0.21"
+zip = { version = "0.6", default-features = false }
+use jni::objects::JClass;
+use jni::sys::{jint, jstring};
+use jni::JNIEnv;
+use std::fs;
+use std::path::Path;
+use zip::write::FileOptions;
+
+#[no_mangle]
+pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getContentFromRust(
+    env: JNIEnv,
+    _class: JClass,
+    page_id: jint,
+) -> jstring {
+    let dir = "/data/data/com.invuzt.xpiz/files";
+    let path = "/data/data/com.invuzt.xpiz/files/XPIZ_Package.zip";
+
+    // HALAMAN TRAINING: BUAT FILE ZIP
+    if page_id == 1 {
+        let _ = fs::create_dir_all(dir);
+        if let Ok(file) = fs::File::create(path) {
+            let mut zip = zip::ZipWriter::new(file);
+            let _ = zip.start_file("build.txt", FileOptions::default());
+            let _ = std::io::Write::write_all(&mut zip, b"BUILD OK");
+            let _ = zip.finish();
+            
+            return env.new_string("BUILD SUCCESS:\n- File: XPIZ_Package.zip\n- Status: Zip Created\n- Logic: Active").unwrap().into_raw();
+        }
+    }
+
+    // HALAMAN PROGRESS: CEK APAKAH FILE ADA (PENGGANTI LS)
+    if page_id == 2 {
+        let exists = Path::new(path).exists();
+        let status = if exists { "FILE FOUND" } else { "NOT FOUND" };
+        let size = if exists {
+            fs::metadata(path).map(|m| m.len()).unwrap_or(0)
+        } else { 0 };
+
+        let res = format!("FILE EXPLORER:\n- Status: {}\n- Size: {} bytes\n- Path: Internal App", status, size);
+        return env.new_string(res).unwrap().into_raw();
+    }
+
+    env.new_string("XPIZ READY").unwrap().into_raw()
+}
+package com.invuzt.xpiz;
+
+import android.app.Activity;
+import android.graphics.*;
+import android.os.Bundle;
+import android.view.*;
+import android.widget.*;
+import static com.invuzt.xpiz.BrikStyle.*;
+
+public class MainActivity extends Activity {
+    static { System.loadLibrary("hello"); }
+    private native String getContentFromRust(int id);
+    private LinearLayout contentArea;
+    private TextView bProg, bTrain;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        
+        Window w = getWindow();
+        w.setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, 
+                  WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+        
+        RelativeLayout root = new RelativeLayout(this);
+        root.setBackgroundColor(GELAP);
+
+        // Header Area
+        RelativeLayout header = new RelativeLayout(this);
+        header.setId(View.generateViewId());
+        header.setPadding(60, 150, 60, 40);
+
+        TextView logo = new TextView(this);
+        logo.setText("XPIZ®"); // SUDAH DIGANTI
+        logo.setTextSize(28);
+        logo.setTypeface(null, Typeface.BOLD);
+        logo.setTextColor(PUTIH);
+        header.addView(logo);
+
+        TextView level = new TextView(this);
+        level.setText("71 LEVEL");
+        level.setPadding(30, 10, 30, 10);
+        level.setBackground(bulat(AKSEN, 50));
+        level.setTextColor(Color.BLACK);
+        level.setTypeface(null, Typeface.BOLD);
+        
+        RelativeLayout.LayoutParams lpLvl = new RelativeLayout.LayoutParams(-2, -2);
+        lpLvl.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+        header.addView(level, lpLvl);
+        root.addView(header);
+
+        // Scrollable Content
+        ScrollView scroll = new ScrollView(this);
+        contentArea = new LinearLayout(this);
+        contentArea.setOrientation(LinearLayout.VERTICAL);
+        contentArea.setPadding(40, 20, 40, 300);
+        scroll.addView(contentArea);
+
+        RelativeLayout.LayoutParams lpScroll = new RelativeLayout.LayoutParams(-1, -1);
+        lpScroll.addRule(RelativeLayout.BELOW, header.getId());
+        root.addView(scroll, lpScroll);
+
+        // Navbar
+        LinearLayout nav = buatNavbar();
+        RelativeLayout.LayoutParams lpNav = new RelativeLayout.LayoutParams(-2, -2);
+        lpNav.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+        lpNav.addRule(RelativeLayout.CENTER_HORIZONTAL);
+        lpNav.setMargins(0, 0, 0, 80);
+        root.addView(nav, lpNav);
+
+        setContentView(root);
+        buka(1);
+    }
+
+    private LinearLayout buatNavbar() {
+        LinearLayout n = new LinearLayout(this);
+        n.setBackground(bulat(Color.BLACK, 150));
+        n.setPadding(15, 15, 15, 15);
+        bProg = new TextView(this); bProg.setText(" PROGRESS ");
+        bTrain = new TextView(this); bTrain.setText(" TRAINING ");
+        configBtn(bProg, 2); configBtn(bTrain, 1);
+        n.addView(bProg); n.addView(bTrain);
+        return n;
+    }
+
+    private void configBtn(TextView tv, int id) {
+        tv.setPadding(50, 30, 50, 30);
+        tv.setTypeface(null, Typeface.BOLD);
+        tv.setOnClickListener(v -> buka(id));
+    }
+
+    void buka(int id) {
+        contentArea.removeAllViews();
+        bProg.setBackground(id == 2 ? bulat(AKSEN, 100) : null);
+        bProg.setTextColor(id == 2 ? Color.BLACK : Color.GRAY);
+        bTrain.setBackground(id == 1 ? bulat(AKSEN, 100) : null);
+        bTrain.setTextColor(id == 1 ? Color.BLACK : Color.GRAY);
+
+        String dataDariRust = getContentFromRust(id);
+        String[] lines = dataDariRust.split("\n");
+        for (String line : lines) {
+            if (line.trim().isEmpty()) continue;
+            TextView card = new TextView(this);
+            card.setText(line);
+            card.setBackground(card(id == 1 ? PUTIH : ABU_TUA, Color.TRANSPARENT, 0));
+            card.setPadding(60, 60, 60, 60);
+            card.setTextColor(id == 1 ? Color.BLACK : PUTIH);
+            card.setTextSize(17);
+            card.setTypeface(null, Typeface.BOLD);
+            
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+            lp.setMargins(0, 0, 0, 30);
+            contentArea.addView(card, lp);
+        }
+    }
+}
+package com.invuzt.xpiz;
+
+import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
+
+public class BrikStyle {
+    // Palet Warna dari Gambar
+    public static final int GELAP = Color.parseColor("#081512");
+    public static final int AKSEN = Color.parseColor("#D0C9FF"); 
+    public static final int PUTIH = Color.WHITE;
+    public static final int ABU_TUA = Color.parseColor("#1A1A1A");
+
+    // Fungsi bikin kotak rounded standar
+    public static GradientDrawable bulat(int warna, int radius) {
+        GradientDrawable gd = new GradientDrawable();
+        gd.setColor(warna);
+        gd.setCornerRadius(radius);
+        return gd;
+    }
+
+    // Fungsi bikin kotak dengan garis pinggir (Stroke) - DIPERBAIKI: public
+    public static GradientDrawable card(int warnaBg, int warnaGaris, int tebal) {
+        GradientDrawable gd = new GradientDrawable();
+        gd.setColor(warnaBg);
+        gd.setCornerRadius(100); 
+        gd.setStroke(tebal, warnaGaris);
+        return gd;
+    }
+}
