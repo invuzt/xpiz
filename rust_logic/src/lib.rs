@@ -36,11 +36,10 @@ impl XpizAI {
 
 #[no_mangle]
 pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getContentFromRust(
-    mut env: JNIEnv,
+    env: JNIEnv, // 'mut' dihapus agar tidak warning
     _class: JClass,
     page_id: jint,
 ) -> jstring {
-    // Simulasi data yang nantinya bisa diambil dari storage
     let ai = XpizAI { xp: 4500, reaction: 240 };
     let content = ai.analyze(page_id as i32);
 
