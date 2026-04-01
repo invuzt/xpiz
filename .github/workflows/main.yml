@@ -28,9 +28,15 @@ jobs:
           BUILD_TOOLS_PATH=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
           
-          rm -rf obj/java && mkdir -p obj/java
+          # Hapus sisa build lama
+          rm -rf obj/java classes.dex
+          mkdir -p obj/java
+          
+          # Kompilasi: Tambahkan flag -g agar debugging lebih mudah
+          # Kita compile BrikStyle.java DAN MainActivity.java sekaligus
           javac -d obj/java -cp $PLATFORM_JAR src/com/invuzt/xpiz/*.java
           
+          # D8: Masukkan seluruh folder obj/java agar struktur package utuh
           $BUILD_TOOLS_PATH/d8 --release --lib $PLATFORM_JAR --output . $(find obj/java -name "*.class")
 
       - name: Assemble & Sign APK
@@ -38,21 +44,16 @@ jobs:
           BUILD_TOOLS_PATH=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
 
-          # --- FIX RESOURCE ERROR ---
-          # Jika folder res gak ada, buat folder kosong yang nyata
           if [ ! -d "res" ]; then 
             mkdir -p res/values
             echo '<resources></resources>' > res/values/strings.xml
           fi
 
-          # AAPT pake folder res yang sudah pasti ada
           $BUILD_TOOLS_PATH/aapt package -f -M AndroidManifest.xml -I $PLATFORM_JAR -F xpiz-temp.apk -S res/
 
-          # Masukkan DEX dan JNI
           zip -g xpiz-temp.apk classes.dex
           zip -g -r xpiz-temp.apk lib/
 
-          # Signing
           keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=xpiz" || true
           $BUILD_TOOLS_PATH/apksigner sign --ks debug.keystore --ks-pass pass:android --out xpiz.apk xpiz-temp.apk
 
