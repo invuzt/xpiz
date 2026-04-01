@@ -1,37 +1,19 @@
-# --- Konfigurasi Path ---
-NDK_PATH ?= $(ANDROID_NDK_HOME)
-SDK_PATH ?= $(ANDROID_HOME)
-PLATFORM ?= 34
-BUILD_TOOLS ?= $(SDK_PATH)/build-tools/34.0.0
+# --- HANYA UNTUK BERSIH-BERSIH & PUSH ---
 
-# --- Nama Project ---
-PACKAGE_PATH = com.invuzt.xpiz
-
-build: clean
-	# 1. Build Rust Logic
-	cd rust_logic && cargo build --target aarch64-linux-android --release
-	cp rust_logic/target/aarch64-linux-android/release/libcakru_core.a jni/
-
-	# 2. Jalankan NDK Build (Hasilnya libhello.so)
-	$(NDK_PATH)/ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=jni/Android.mk NDK_APPLICATION_MK=jni/Application.mk
-
-	# 3. Kompilasi Java ke Class (PENTING!)
-	mkdir -p obj/java
-	javac -d obj/java \
-		-bootclasspath $(SDK_PATH)/platforms/android-$(PLATFORM)/android.jar \
-		src/$(PACKAGE_PATH)/MainActivity.java
-
-	# 4. Convert Class ke DEX (Agar bisa dibaca Android)
-	$(BUILD_TOOLS)/d8 --release \
-		--lib $(SDK_PATH)/platforms/android-$(PLATFORM)/android.jar \
-		--output . \
-		obj/java/$(PACKAGE_PATH)/*.class
-
-	# 5. Packaging (Gunakan alat build Mas biasanya, misal aapt atau manual zip)
-	# Pastikan file 'classes.dex' ikut masuk ke dalam root APK.
-	@echo "Build selesai. Pastikan classes.dex masuk ke dalam APK!"
-
+# 1. Bersihkan semua 'hutan' folder biar rapi
 clean:
-	rm -rf obj/ libs/ bin/ gen/ classes.dex
-	rm -f jni/libcakru_core.a
+	@echo "Membersihkan sampah build..."
+	rm -rf obj/ bin/ gen/ output/ *.dex jniLibs/
+	@if [ -d "rust_logic" ]; then cd rust_logic && cargo clean; fi
 
+# 2. Langsung kirim ke GitHub (Biar GitHub Actions yang build)
+push:
+	@echo "Mengirim ke GitHub..."
+	git add .
+	git commit -m "style: apply brik ui and hello rust"
+	git push origin feature-ai-ui
+
+# 3. Sekali perintah: Bersihkan lalu Push
+deploy: clean push
+
+.PHONY: clean push deploy
