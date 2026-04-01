@@ -5,114 +5,99 @@ import android.os.*;
 import android.widget.*;
 import android.view.*;
 import android.graphics.*;
-import android.graphics.drawable.*;
-import android.view.animation.*;
+import android.text.method.ScrollingMovementMethod;
 
 public class MainActivity extends Activity {
     static { System.loadLibrary("hello"); }
     private native String predictBestButton(int id);
 
-    private FrameLayout[] buttonContainers = new FrameLayout[3];
-    private View[] glowEffects = new View[3];
-    private String[] labels = {"KOPI", "SABUN", "STOK"};
-    private TextView aiTerminal;
+    private TextView terminalOutput;
+    private EditText commandInput;
+    private ScrollView scrollView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Background Luar Angkasa (Deep Black)
-        RelativeLayout root = new RelativeLayout(this);
-        root.setBackgroundColor(Color.parseColor("#050505"));
+        // Root Layout (Deep Black)
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(Color.BLACK);
+        root.setPadding(20, 20, 20, 20);
 
-        // AI Terminal Header (Matrix Style)
-        aiTerminal = new TextView(this);
-        aiTerminal.setText("> ODFIZ_AI: INITIALIZING...\n> NEURAL_NETWORK: ACTIVE");
-        aiTerminal.setTextColor(Color.parseColor("#00FF41"));
-        aiTerminal.setTypeface(Typeface.MONOSPACE);
-        aiTerminal.setTextSize(12);
-        aiTerminal.setPadding(50, 80, 50, 0);
-        root.addView(aiTerminal);
+        // Terminal Output (Green Matrix Text)
+        terminalOutput = new TextView(this);
+        terminalOutput.setTextColor(Color.parseColor("#00FF41"));
+        terminalOutput.setTextSize(14);
+        terminalOutput.setTypeface(Typeface.MONOSPACE);
+        terminalOutput.setText("--- ODFIZ XPIZ OS v1.0 [OFFLINE_AI] ---\n> Type 'help' for commands\n\n");
+        
+        scrollView = new ScrollView(this);
+        LinearLayout.LayoutParams scrollParams = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f);
+        scrollView.addView(terminalOutput);
+        root.addView(scrollView, scrollParams);
 
-        // Container Tombol di Tengah
-        LinearLayout menuContainer = new LinearLayout(this);
-        menuContainer.setOrientation(LinearLayout.VERTICAL);
-        menuContainer.setGravity(Gravity.CENTER);
-        RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-        root.addView(menuContainer, params);
+        // Input Area
+        LinearLayout inputArea = new LinearLayout(this);
+        inputArea.setOrientation(LinearLayout.HORIZONTAL);
+        inputArea.setPadding(0, 20, 0, 0);
 
-        for (int i = 0; i < 3; i++) {
-            final int id = i + 1;
-            buttonContainers[i] = new FrameLayout(this);
-            
-            // Efek Cahaya (Glow)
-            glowEffects[i] = new View(this);
-            glowEffects[i].setAlpha(0f);
-            updateGlow(glowEffects[i], "#00FFFF");
-            buttonContainers[i].addView(glowEffects[i], new FrameLayout.LayoutParams(350, 350, Gravity.CENTER));
+        TextView prompt = new TextView(this);
+        prompt.setText("xpiz@admin:~$ ");
+        prompt.setTextColor(Color.WHITE);
+        prompt.setTypeface(Typeface.MONOSPACE);
+        inputArea.addView(prompt);
 
-            // Tombol Glassmorphism Lingkaran
-            Button b = new Button(this);
-            b.setText(labels[i]);
-            b.setTextColor(Color.WHITE);
-            b.setTextSize(14);
-            b.setTypeface(Typeface.DEFAULT_BOLD);
-            updateGlassStyle(b);
+        commandInput = new EditText(this);
+        commandInput.setBackgroundColor(Color.TRANSPARENT);
+        commandInput.setTextColor(Color.WHITE);
+        commandInput.setTypeface(Typeface.MONOSPACE);
+        commandInput.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEND);
+        commandInput.setSingleLine(true);
+        LinearLayout.LayoutParams inputParams = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        inputArea.addView(commandInput, inputParams);
 
-            b.setOnClickListener(v -> {
-                String result = predictBestButton(id);
-                aiTerminal.setText("> USER_INPUT: " + labels[id-1] + "\n" + result.toUpperCase());
-                applyAiMagic(result);
-            });
+        root.addView(inputArea);
 
-            buttonContainers[i].addView(b, new FrameLayout.LayoutParams(250, 250, Gravity.CENTER));
-            menuContainer.addView(buttonContainers[i], new LinearLayout.LayoutParams(450, 450));
-        }
+        // Event Listener (Enter Key)
+        commandInput.setOnEditorActionListener((v, actionId, event) -> {
+            String cmd = commandInput.getText().toString().trim().toLowerCase();
+            if (!cmd.isEmpty()) {
+                handleCommand(cmd);
+                commandInput.setText("");
+            }
+            return true;
+        });
 
         setContentView(root);
     }
 
-    private void applyAiMagic(String result) {
-        for (int i = 0; i < 3; i++) {
-            glowEffects[i].animate().alpha(0f).scaleX(0.5f).scaleY(0.5f).setDuration(300).start();
-            buttonContainers[i].animate().scaleX(0.9f).scaleY(0.9f).setDuration(300).start();
-            buttonContainers[i].clearAnimation();
+    private void handleCommand(String cmd) {
+        appendToTerminal("\n\n[USER]: " + cmd);
+        
+        String response;
+        if (cmd.equals("help")) {
+            response = "> Available commands:\n  - kopi  : Log coffee transaction\n  - sabun : Log soap transaction\n  - stok  : Check predictive stock\n  - clear : Wipe terminal";
+        } else if (cmd.equals("clear")) {
+            terminalOutput.setText("--- TERMINAL WIPED ---");
+            return;
+        } else if (cmd.contains("kopi")) {
+            response = predictBestButton(1);
+        } else if (cmd.contains("sabun")) {
+            response = predictBestButton(2);
+        } else if (cmd.contains("stok")) {
+            response = predictBestButton(3);
+        } else {
+            response = "> Error: Unknown command '" + cmd + "'";
         }
 
-        int target = -1;
-        String color = "#00FFFF";
-        if (result.contains("KOPI")) { target = 0; color = "#FF00FF"; }
-        else if (result.contains("SABUN")) { target = 1; color = "#00FFFF"; }
-        else if (result.contains("STOK")) { target = 2; color = "#FFFF00"; }
-
-        if (target != -1) {
-            updateGlow(glowEffects[target], color);
-            glowEffects[target].animate().alpha(0.7f).scaleX(1.8f).scaleY(1.8f).setDuration(500).start();
-            buttonContainers[target].animate().scaleX(1.2f).scaleY(1.2f).setDuration(500).start();
-            
-            ScaleAnimation pulse = new ScaleAnimation(1.2f, 1.3f, 1.2f, 1.3f, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
-            pulse.setDuration(600);
-            pulse.setRepeatMode(Animation.REVERSE);
-            pulse.setRepeatCount(Animation.INFINITE);
-            buttonContainers[target].startAnimation(pulse);
-        }
+        appendToTerminal("\n[ODFIZ_AI]: " + response);
     }
 
-    private void updateGlow(View v, String color) {
-        GradientDrawable gd = new GradientDrawable();
-        gd.setShape(GradientDrawable.OVAL);
-        gd.setColor(Color.parseColor(color));
-        gd.setGradientType(GradientDrawable.RADIAL_GRADIENT);
-        gd.setGradientRadius(250);
-        v.setBackground(gd);
-    }
-
-    private void updateGlassStyle(Button b) {
-        GradientDrawable gd = new GradientDrawable();
-        gd.setShape(GradientDrawable.OVAL);
-        gd.setColor(Color.argb(50, 255, 255, 255));
-        gd.setStroke(4, Color.argb(150, 255, 255, 255));
-        b.setBackground(gd);
+    private void appendToTerminal(String text) {
+        terminalOutput.append(text);
+        scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN));
     }
 }
