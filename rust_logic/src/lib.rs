@@ -1,19 +1,6 @@
 use jni::JNIEnv;
 use jni::objects::{JClass, JString};
 use jni::sys::{jstring};
-use std::sync::Mutex;
-use std::collections::HashMap;
-
-// Memori Pintar AI Odfiz
-struct AiBrain {
-    word_count: HashMap<String, i32>,
-}
-
-lazy_static::lazy_static! {
-    static ref BRAIN: Mutex<AiBrain> = Mutex::new(AiBrain {
-        word_count: HashMap::new(),
-    });
-}
 
 #[no_mangle]
 pub unsafe extern "system" fn Java_com_invuzt_xpiz_MainActivity_predictBestButton(
@@ -23,24 +10,24 @@ pub unsafe extern "system" fn Java_com_invuzt_xpiz_MainActivity_predictBestButto
 ) -> jstring {
     let input: String = env.get_string(&JString::from(unsafe { jni::objects::JObject::from_raw(input_java) }))
         .expect("ERR").into();
-    let input = input.trim().to_lowercase();
-    let mut brain = BRAIN.lock().unwrap();
+    let input = input.trim();
 
-    // AI LEARNING: Hitung seberapa sering kata ini muncul
-    let count = brain.word_count.entry(input.clone()).or_insert(0);
-    *count += 1;
+    if input.is_empty() { return return_string(&mut env, ""); }
 
-    // AI DECISION: Kalau kata diketik 2x, jadikan TOMBOL OTOMATIS
-    if *count == 2 {
-        return return_string(&mut env, &format!("AUTO_BTN|{}", input.to_uppercase()));
+    // AI AUTO-DETECTION
+    // 1. Jika input mengandung titik dua (Contoh: Dimsum : 15000)
+    if input.contains(':') {
+        let parts: Vec<&str> = input.split(':').collect();
+        return return_string(&mut env, &format!("NEW_BTN|{}|{}", parts[0].trim(), parts[1].trim()));
     }
 
-    // LOGIKA HARGA (Kasir Otomatis)
-    if let Ok(harga) = input.parse::<f32>() {
-        return return_string(&mut env, &format!("PAY|{}", harga));
+    // 2. Jika input adalah angka murni (Contoh: 50000) -> Pembayaran
+    if let Ok(val) = input.parse::<f32>() {
+        return return_string(&mut env, &format!("CASH|{}", val));
     }
 
-    return_string(&mut env, &format!("LEARNING|Data '{}' tersimpan. Ketik sekali lagi untuk jadikan shortcut.", input))
+    // 3. Jika teks biasa (Contoh: Bakpao) -> Buat tombol tanpa harga (default 0)
+    return return_string(&mut env, &format!("NEW_BTN|{}|0", input.to_uppercase()));
 }
 
 fn return_string(env: &mut JNIEnv, s: &str) -> jstring {
