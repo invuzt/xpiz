@@ -21,7 +21,6 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // Fullscreen Mode
         Window w = getWindow();
         w.setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, 
                   WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
@@ -29,7 +28,7 @@ public class MainActivity extends Activity {
         RelativeLayout root = new RelativeLayout(this);
         root.setBackgroundColor(Color.parseColor(getSystemConfig("COLOR_GELAP")));
 
-        // 1. Header (Logo & Notif)
+        // 1. Header
         RelativeLayout header = new RelativeLayout(this);
         header.setId(View.generateViewId());
         header.setPadding(60, 150, 60, 40);
@@ -38,7 +37,7 @@ public class MainActivity extends Activity {
         tvLogo.setText(getSystemConfig("LOGO"));
         tvLogo.setTextSize(28);
         tvLogo.setTypeface(null, Typeface.BOLD);
-        tvLogo.setTextColor(Color.parseColor("#FFFFFF"));
+        tvLogo.setTextColor(Color.WHITE);
         header.addView(tvLogo);
 
         tvLevel = new TextView(this);
@@ -53,27 +52,32 @@ public class MainActivity extends Activity {
         header.addView(tvLevel, lpLvl);
         root.addView(header);
 
-        // 2. Scrollable Content Area
+        // 2. Content Area
         ScrollView scroll = new ScrollView(this);
         contentArea = new LinearLayout(this);
         contentArea.setOrientation(LinearLayout.VERTICAL);
-        contentArea.setPadding(40, 20, 40, 350); // Padding bawah agar tidak tertutup navbar
+        contentArea.setPadding(40, 20, 40, 350); 
         scroll.addView(contentArea);
 
         RelativeLayout.LayoutParams lpScroll = new RelativeLayout.LayoutParams(-1, -1);
         lpScroll.addRule(RelativeLayout.BELOW, header.getId());
         root.addView(scroll, lpScroll);
 
-        // 3. Floating Navbar Container
-        navContainer = new LinearLayout(this);
-        navContainer.setBackground(bulat(Color.BLACK, 150));
-        navContainer.setPadding(20, 20, 20, 20);
+        // 3. Navbar dengan Scroll (Mencegah teks terpotong)
+        HorizontalScrollView navScroll = new HorizontalScrollView(this);
+        navScroll.setHorizontalScrollBarEnabled(false); // Sembunyikan bar scroll agar estetik
+        navScroll.setBackground(bulat(Color.BLACK, 150));
         
-        RelativeLayout.LayoutParams lpNav = new RelativeLayout.LayoutParams(-2, -2);
-        lpNav.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
-        lpNav.addRule(RelativeLayout.CENTER_HORIZONTAL);
-        lpNav.setMargins(0, 0, 0, 80);
-        root.addView(navContainer, lpNav);
+        navContainer = new LinearLayout(this);
+        navContainer.setOrientation(LinearLayout.HORIZONTAL);
+        navContainer.setPadding(20, 20, 20, 20);
+        navScroll.addView(navContainer);
+
+        RelativeLayout.LayoutParams lpNavScroll = new RelativeLayout.LayoutParams(-2, -2);
+        lpNavScroll.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+        lpNavScroll.addRule(RelativeLayout.CENTER_HORIZONTAL);
+        lpNavScroll.setMargins(40, 0, 40, 80); // Margin kiri-kanan agar tidak mentok layar
+        root.addView(navScroll, lpNavScroll);
 
         setContentView(root);
         buka(1);
@@ -89,6 +93,7 @@ public class MainActivity extends Activity {
             TextView btn = new TextView(this);
             btn.setText(" " + menus[i] + " ");
             btn.setPadding(45, 25, 45, 25);
+            btn.setSingleLine(true); // PAKSA SATU BARIS
             btn.setTypeface(null, Typeface.BOLD);
             btn.setBackground(bulat(Color.parseColor(stl[0]), 100));
             btn.setTextColor(Color.parseColor(stl[1]));
@@ -108,24 +113,19 @@ public class MainActivity extends Activity {
 
         for (String line : data.split("\n")) {
             if (line.trim().isEmpty()) continue;
-            
             TextView card = new TextView(this);
             card.setText(line);
-            // Style card sederhana (Warna diambil dari state ID)
             int bg = (id == 1) ? Color.WHITE : Color.parseColor("#1A1A1A");
             int txt = (id == 1) ? Color.BLACK : Color.WHITE;
-            
             card.setBackground(card(bg, 0, 0));
             card.setPadding(60, 60, 60, 60);
             card.setTextColor(txt);
             card.setTextSize(17);
             card.setTypeface(null, Typeface.BOLD);
-
             card.setOnClickListener(v -> {
                 handleTouch(line);
                 tvLevel.setText(getSystemConfig("NOTIF"));
             });
-
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
             lp.setMargins(0, 0, 0, 30);
             contentArea.addView(card, lp);
