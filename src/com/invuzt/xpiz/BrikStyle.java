@@ -6,12 +6,14 @@ import android.view.*;
 import android.widget.*;
 
 public class BrikStyle {
+    // --- DESIGN TOKENS ---
     public static final int CL_BG_OUTER  = Color.parseColor("#081512"); 
     public static final int CL_BLACK     = Color.parseColor("#081512"); 
     public static final int CL_ACCENT    = Color.parseColor("#D0C9FF"); 
     public static final int CL_WHITE     = Color.parseColor("#FFFFFF");
     public static final int CL_DARK_CARD = Color.parseColor("#0A1D19");
 
+    // --- DRAWABLES ---
     public static GradientDrawable round(int color, int radius) {
         GradientDrawable gd = new GradientDrawable();
         gd.setColor(color);
@@ -27,30 +29,18 @@ public class BrikStyle {
         return gd;
     }
 
-    // Komponen Kartu Statistik untuk Halaman Progress
-    public static LinearLayout createStatCard(ViewGroup parent, String title, String value) {
-        LinearLayout card = new LinearLayout(parent.getContext());
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(60, 60, 60, 60);
-        card.setBackground(round(CL_DARK_CARD, 80));
-        
-        TextView tTitle = new TextView(parent.getContext());
-        tTitle.setText(title);
-        tTitle.setTextColor(Color.GRAY);
-        card.addView(tTitle);
-        
-        TextView tVal = new TextView(parent.getContext());
-        tVal.setText(value);
-        tVal.setTextColor(Color.WHITE);
-        tVal.setTextSize(32);
-        tVal.setTypeface(Typeface.DEFAULT_BOLD);
-        card.addView(tVal);
-        
-        return card;
-    }
-
+    // --- COMPONENTS ---
     public static void space(LinearLayout l, int h) {
         View s = new View(l.getContext());
         l.addView(s, new LinearLayout.LayoutParams(-1, h));
+    }
+
+    public static TextView createDescription(ViewGroup parent, String text) {
+        TextView tv = new TextView(parent.getContext());
+        tv.setText(text);
+        tv.setTextColor(Color.parseColor("#B0B0B0"));
+        tv.setTextSize(14);
+        tv.setLineSpacing(0, 1.4f);
+        return tv;
     }
 }
