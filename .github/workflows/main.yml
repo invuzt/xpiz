@@ -17,41 +17,42 @@ jobs:
           cd rust_logic
           NDK_PATH=$(ls -d $ANDROID_SDK_ROOT/ndk/* | tail -1)
           CLANG_PATH=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
-          # Build menjadi .so (Shared Library)
-          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$CLANG_PATH \
-          cargo build --target aarch64-linux-android --release
           
-          # Buat folder jniLibs untuk menampung hasil .so
+          # Build .so dengan target Android
+          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$CLANG_PATH           cargo build --target aarch64-linux-android --release
+
+          # Buat folder jniLibs yang standar (arm64-v8a)
           mkdir -p ../lib/arm64-v8a
-          # Ambil file .so yang benar (libhello.so)
           cp target/aarch64-linux-android/release/libhello.so ../lib/arm64-v8a/
 
       - name: Compile Java & Create DEX
         run: |
           BUILD_TOOLS_PATH=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
-          mkdir -p obj/java
-          # Kompilasi SEMUA file .java (*.java) termasuk BrikStyle
+          
+          # Bersihkan folder objek
+          rm -rf obj/java && mkdir -p obj/java
+          
+          # Kompilasi semua file Java di package xpiz
           javac -d obj/java -cp $PLATFORM_JAR src/com/invuzt/xpiz/*.java
-          # Buat classes.dex dari semua class di package
-          $BUILD_TOOLS_PATH/d8 --release --lib $PLATFORM_JAR --output . obj/java/com/invuzt/xpiz/*.class
+          
+          # D8: Bungkus semua class hasil find agar struktur folder package tetap utuh
+          $BUILD_TOOLS_PATH/d8 --release --lib $PLATFORM_JAR --output . $(find obj/java -name "*.class")
 
       - name: Assemble & Sign APK
         run: |
           BUILD_TOOLS_PATH=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
-          
-          # JANGAN TIMPA MANIFEST, Gunakan Manifest asli di root
-          # AAPT cuma bungkus sumber daya
-          $BUILD_TOOLS_PATH/aapt package -f -M AndroidManifest.xml -I $PLATFORM_JAR -F xpiz-temp.apk res/ || true
-          # Kalau res/ kosong, buat dummy
-          if [ ! -d "res" ]; then mkdir empty_res; $BUILD_TOOLS_PATH/aapt package -f -M AndroidManifest.xml -I $PLATFORM_JAR -F xpiz-temp.apk empty_res; fi
 
-          # Masukkan DEX dan JNI (.so)
+          # Buat resource dummy jika folder res kosong
+          if [ ! -d "res" ]; then mkdir -p empty_res; fi
+          $BUILD_TOOLS_PATH/aapt package -f -M AndroidManifest.xml -I $PLATFORM_JAR -F xpiz-temp.apk ${res_dir:-empty_res}
+
+          # Masukkan DEX dan Library Native (.so)
           zip -g xpiz-temp.apk classes.dex
           zip -g -r xpiz-temp.apk lib/
 
-          # Signing
+          # Signing APK
           keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=xpiz" || true
           $BUILD_TOOLS_PATH/apksigner sign --ks debug.keystore --ks-pass pass:android --out xpiz.apk xpiz-temp.apk
 

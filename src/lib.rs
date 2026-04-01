@@ -8,8 +8,8 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getContentFromRust(
     page_id: c_int,
 ) -> *mut c_char {
     let content = match page_id {
-        1 => "TRAINING (RUST MODE):\n\n1. Rhythm Match\n2. Speed Test\n3. Sequence Rush",
-        2 => "PROGRESS (RUST MODE):\n\nLevel: 71\nTotal XP: 4.500\nRank: Gold",
+        1 => "TRAINING (RUST ENGINE):\n\n1. Rhythm Match\n2. Speed Test\n3. Sequence Rush",
+        2 => "PROGRESS (RUST ENGINE):\n\nLevel: 71\nTotal XP: 4.500\nRank: Gold",
         _ => "XPIZ System Ready",
     };
     
