@@ -24,13 +24,13 @@ public class MainActivity extends Activity {
         RelativeLayout root = new RelativeLayout(this);
         root.setBackgroundColor(GELAP);
 
-        // Header
+        // Header Area
         RelativeLayout header = new RelativeLayout(this);
         header.setId(View.generateViewId());
         header.setPadding(60, 150, 60, 40);
 
         TextView logo = new TextView(this);
-        logo.setText("BRIK®");
+        logo.setText("XPIZ®"); // SUDAH DIGANTI
         logo.setTextSize(28);
         logo.setTypeface(null, Typeface.BOLD);
         logo.setTextColor(PUTIH);
@@ -95,21 +95,16 @@ public class MainActivity extends Activity {
         bTrain.setBackground(id == 1 ? bulat(AKSEN, 100) : null);
         bTrain.setTextColor(id == 1 ? Color.BLACK : Color.GRAY);
 
-        // --- SEKARANG DATA DIAMBIL DARI RUST ---
         String dataDariRust = getContentFromRust(id);
-        
-        // Kita pecah string dari Rust (per baris) biar jadi card-card cantik
         String[] lines = dataDariRust.split("\n");
         for (String line : lines) {
             if (line.trim().isEmpty()) continue;
-
             TextView card = new TextView(this);
             card.setText(line);
-            // Training (ID 1) pakai Card Putih, Progress (ID 2) pakai Card Gelap
             card.setBackground(card(id == 1 ? PUTIH : ABU_TUA, Color.TRANSPARENT, 0));
             card.setPadding(60, 60, 60, 60);
             card.setTextColor(id == 1 ? Color.BLACK : PUTIH);
-            card.setTextSize(18);
+            card.setTextSize(17);
             card.setTypeface(null, Typeface.BOLD);
             
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
