@@ -1,6 +1,7 @@
 package com.invuzt.xpiz;
 
 import android.app.Activity;
+import android.app.AlertDialog; // Tambah ini
 import android.os.*;
 import android.widget.*;
 import android.view.*;
@@ -28,29 +29,22 @@ public class MainActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.WHITE);
 
-        // --- TOOLBAR CUSTOM ---
         Toolbar toolbar = new Toolbar(this);
-        toolbar.setTitle("Odfiz POS");
+        toolbar.setTitle("Odfiz POS v2.2");
         toolbar.setBackgroundColor(Color.parseColor("#212121"));
         toolbar.setTitleTextColor(Color.WHITE);
-        
-        // Buat Menu secara Dinamis (Tanpa XML agar tidak error)
         toolbar.getMenu().add(0, 1, 0, "KASIR");
         toolbar.getMenu().add(0, 2, 0, "LAPORAN");
         toolbar.getMenu().add(0, 3, 0, "TENTANG");
         
         toolbar.setOnMenuItemClickListener(item -> {
             if(item.getItemId() == 1) showPage(pageTerminal);
-            if(item.getItemId() == 2) {
-                updateLaporanText();
-                showPage(pageLaporan);
-            }
+            if(item.getItemId() == 2) { updateLaporanText(); showPage(pageLaporan); }
             if(item.getItemId() == 3) showPage(pageAbout);
             return true;
         });
         root.addView(toolbar);
 
-        // --- PAGES ---
         initTerminalPage();
         initLaporanPage();
         initAboutPage();
@@ -75,63 +69,74 @@ public class MainActivity extends Activity {
 
         totalView = new TextView(this);
         totalView.setText("Rp 0");
-        totalView.setTextSize(45);
+        totalView.setTextSize(50);
         totalView.setGravity(Gravity.CENTER);
-        totalView.setTextColor(Color.BLACK);
+        totalView.setTextColor(Color.RED); // Biar mencolok
         pageTerminal.addView(totalView);
 
         txtStruk = new TextView(this);
         txtStruk.setTypeface(Typeface.MONOSPACE);
-        txtStruk.setBackgroundColor(Color.parseColor("#EEEEEE"));
-        txtStruk.setPadding(20,20,20,20);
-        txtStruk.setHint("Struk kosong (Klik untuk Simpan PDF)");
+        txtStruk.setBackgroundColor(Color.parseColor("#F0F0F0"));
+        txtStruk.setPadding(30,30,30,30);
+        txtStruk.setHint("Preview Struk (Klik untuk Print)");
         txtStruk.setOnClickListener(v -> saveAsPdf());
         pageTerminal.addView(txtStruk, new LinearLayout.LayoutParams(-1, 0, 1.0f));
 
         EditText input = new EditText(this);
-        input.setHint("Ketik Nama:Harga atau Bayar");
+        input.setHint("Ketik Nama:Harga atau Angka Bayar");
         input.setSingleLine(true);
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
         input.setImeOptions(EditorInfo.IME_ACTION_SEND);
         input.setOnEditorActionListener((v, id, event) -> {
-            String res = predictBestButton(input.getText().toString());
-            String[] p = res.split("\\|");
-            if(p[0].equals("ADD")) addProduct(p[1], Integer.parseInt(p[2]));
-            else if(p[0].equals("PAY")) finalizeTransaction(Integer.parseInt(p[1]));
-            input.setText("");
+            String raw = input.getText().toString();
+            if(!raw.isEmpty()) {
+                String res = predictBestButton(raw);
+                handleAiResult(res);
+                input.setText("");
+            }
             return true;
         });
         pageTerminal.addView(input);
     }
 
+    private void handleAiResult(String res) {
+        String[] p = res.split("\\|");
+        if(p[0].equals("ADD")) addProduct(p[1], Integer.parseInt(p[2]));
+        else if(p[0].equals("PAY")) finalizeTransaction(Integer.parseInt(p[1]));
+    }
+
     private void addProduct(String n, int h) {
         Button b = new Button(this);
         b.setText(n + "\n" + h);
-        b.setOnClickListener(v -> {
-            totalBelanja += h;
-            updateTotal();
-        });
-        b.setOnLongClickListener(v -> {
-            if(totalBelanja >= h) totalBelanja -= h;
-            updateTotal();
-            return true;
-        });
+        b.setOnClickListener(v -> { totalBelanja += h; updateTotal(); });
+        b.setOnLongClickListener(v -> { if(totalBelanja >= h) totalBelanja -= h; updateTotal(); return true; });
         productContainer.addView(b);
     }
 
     private void finalizeTransaction(int bayar) {
         int kembali = bayar - totalBelanja;
-        String date = new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date());
         
-        currentReceipt = "   ODFIZ PONOROGO\n" +
-                         "   Waktu: " + date + "\n" +
-                         "--------------------\n" +
-                         "TOTAL   : " + totalBelanja + "\n" +
-                         "BAYAR   : " + bayar + "\n" +
-                         "KEMBALI : " + kembali + "\n" +
-                         "--------------------\n" +
-                         "   SUWUN LUR!";
-                         
+        // --- ALERT DIALOG KEMBALIAN (VISUAL UTAMA) ---
+        new AlertDialog.Builder(this)
+            .setTitle("TRANSAKSI BERHASIL")
+            .setMessage("TOTAL   : Rp " + totalBelanja + "\n" +
+                        "BAYAR   : Rp " + bayar + "\n\n" +
+                        "KEMBALI : Rp " + kembali)
+            .setPositiveButton("OK", null)
+            .show();
+
+        // Update Struk Preview
+        String date = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(new Date());
+        currentReceipt = "      ODFIZ POS\n" +
+                         "   " + date + "\n" +
+                         "------------------------\n" +
+                         "TOTAL   : Rp " + totalBelanja + "\n" +
+                         "BAYAR   : Rp " + bayar + "\n" +
+                         "KEMBALI : Rp " + kembali + "\n" +
+                         "------------------------\n" +
+                         "    MATURNUWUN LUR!";
         txtStruk.setText(currentReceipt);
+
         omset += totalBelanja;
         txCount++;
         totalBelanja = 0;
@@ -141,21 +146,21 @@ public class MainActivity extends Activity {
     private void initLaporanPage() {
         pageLaporan = new LinearLayout(this);
         pageLaporan.setOrientation(LinearLayout.VERTICAL);
-        pageLaporan.setPadding(30,30,30,30);
+        pageLaporan.setPadding(40,40,40,40);
         txtRekap = new TextView(this);
-        txtRekap.setTextSize(22);
+        txtRekap.setTextSize(24);
         pageLaporan.addView(txtRekap);
     }
 
     private void updateLaporanText() {
-        txtRekap.setText("REKAP HARI INI\n\nOmset: Rp " + omset + "\nTotal Nota: " + txCount);
+        txtRekap.setText("REKAP PENJUALAN\n\nOmset Hari Ini: Rp " + omset + "\nJumlah Nota  : " + txCount);
     }
 
     private void initAboutPage() {
         pageAbout = new LinearLayout(this);
         pageAbout.setGravity(Gravity.CENTER);
         TextView t = new TextView(this);
-        t.setText("Odfiz POS v2.1\nModular Terminal Interface");
+        t.setText("Odfiz POS v2.2\nPonorogo Digital Solution");
         pageAbout.addView(t);
     }
 
@@ -181,14 +186,13 @@ public class MainActivity extends Activity {
         int y = 40;
         for(String line : currentReceipt.split("\n")) {
             canvas.drawText(line, 20, y, p);
-            y += 25;
+            y += 28;
         }
-        
         doc.finishPage(page);
         try {
-            File f = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Odfiz_Struk.pdf");
+            File f = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Odfiz_Bill.pdf");
             doc.writeTo(new FileOutputStream(f));
-            Toast.makeText(this, "PDF Tersimpan di Downloads", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "PDF Siap di Downloads!", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {}
         doc.close();
     }
