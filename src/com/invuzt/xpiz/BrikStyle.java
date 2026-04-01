@@ -6,12 +6,22 @@ import android.view.*;
 import android.widget.*;
 
 public class BrikStyle {
-    // --- DESIGN TOKENS ---
+    // --- BRANDING ---
+    public static final String BRAND_NAME = "XPIZ®";
+
+    // --- COLORS ---
     public static final int CL_BG_OUTER  = Color.parseColor("#081512"); 
     public static final int CL_BLACK     = Color.parseColor("#081512"); 
     public static final int CL_ACCENT    = Color.parseColor("#D0C9FF"); 
     public static final int CL_WHITE     = Color.parseColor("#FFFFFF");
     public static final int CL_DARK_CARD = Color.parseColor("#0A1D19");
+
+    // --- LAYOUT LOCK (Gembok Dimensi) ---
+    public static final int RADIUS_BIG    = 110;
+    public static final int RADIUS_CARD   = 100;
+    public static final int RADIUS_NAV    = 80;
+    public static final int PAD_SCREEN    = 60;
+    public static final int PAD_HEADER_T  = 130; // Biar mepet status bar
 
     // --- DRAWABLES ---
     public static GradientDrawable round(int color, int radius) {
@@ -29,7 +39,6 @@ public class BrikStyle {
         return gd;
     }
 
-    // --- COMPONENTS ---
     public static void space(LinearLayout l, int h) {
         View s = new View(l.getContext());
         l.addView(s, new LinearLayout.LayoutParams(-1, h));

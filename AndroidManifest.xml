@@ -3,7 +3,7 @@
     <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34" />
     <application 
         android:hasCode="true" 
-        android:label="Odfiz POS"
+        android:label="xpiz" 
         android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
