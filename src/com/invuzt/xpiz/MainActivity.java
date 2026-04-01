@@ -52,31 +52,34 @@ public class MainActivity extends Activity {
         header.addView(tvLevel, lpLvl);
         root.addView(header);
 
-        // 2. Content Area
+        // 2. Content
         ScrollView scroll = new ScrollView(this);
         contentArea = new LinearLayout(this);
         contentArea.setOrientation(LinearLayout.VERTICAL);
-        contentArea.setPadding(40, 20, 40, 350); 
+        contentArea.setPadding(40, 20, 40, 400); 
         scroll.addView(contentArea);
 
         RelativeLayout.LayoutParams lpScroll = new RelativeLayout.LayoutParams(-1, -1);
         lpScroll.addRule(RelativeLayout.BELOW, header.getId());
         root.addView(scroll, lpScroll);
 
-        // 3. Navbar dengan Scroll (Mencegah teks terpotong)
+        // 3. Navbar Fix (Kapsul Hitam di ScrollView)
         HorizontalScrollView navScroll = new HorizontalScrollView(this);
-        navScroll.setHorizontalScrollBarEnabled(false); // Sembunyikan bar scroll agar estetik
+        navScroll.setHorizontalScrollBarEnabled(false);
+        navScroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        // Pindahkan Background ke sini agar tombol tidak "keluar jalur"
         navScroll.setBackground(bulat(Color.BLACK, 150));
+        navScroll.setPadding(15, 15, 15, 15);
         
         navContainer = new LinearLayout(this);
         navContainer.setOrientation(LinearLayout.HORIZONTAL);
-        navContainer.setPadding(20, 20, 20, 20);
+        navContainer.setGravity(Gravity.CENTER_VERTICAL);
         navScroll.addView(navContainer);
 
         RelativeLayout.LayoutParams lpNavScroll = new RelativeLayout.LayoutParams(-2, -2);
         lpNavScroll.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
         lpNavScroll.addRule(RelativeLayout.CENTER_HORIZONTAL);
-        lpNavScroll.setMargins(40, 0, 40, 80); // Margin kiri-kanan agar tidak mentok layar
+        lpNavScroll.setMargins(50, 0, 50, 80); 
         root.addView(navScroll, lpNavScroll);
 
         setContentView(root);
@@ -91,9 +94,10 @@ public class MainActivity extends Activity {
             String[] stl = getStyleConfig(pageId).split("\\|");
             
             TextView btn = new TextView(this);
-            btn.setText(" " + menus[i] + " ");
-            btn.setPadding(45, 25, 45, 25);
-            btn.setSingleLine(true); // PAKSA SATU BARIS
+            btn.setText(" " + menus[i].trim() + " ");
+            btn.setPadding(50, 30, 50, 30); // Padding simetris
+            btn.setSingleLine(true);
+            btn.setGravity(Gravity.CENTER);
             btn.setTypeface(null, Typeface.BOLD);
             btn.setBackground(bulat(Color.parseColor(stl[0]), 100));
             btn.setTextColor(Color.parseColor(stl[1]));
