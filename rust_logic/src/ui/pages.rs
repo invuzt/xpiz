@@ -1,24 +1,21 @@
 pub enum AppPath {
-    Training,
-    Progress,
-    Settings, // Akses via Header
+    Dynamic(String), // Konten ditentukan oleh input AI
 }
 
 impl AppPath {
-    pub fn from_id(id: i32) -> Self {
-        match id {
-            1 => AppPath::Training,
-            2 => AppPath::Progress,
-            99 => AppPath::Settings, // ID khusus untuk Settings
-            _ => AppPath::Training,
-        }
-    }
-
-    pub fn get_content(&self) -> &'static str {
-        match self {
-            AppPath::Training => "START ENGINE|INPUT\nCHECK STATUS|LABEL\nUPDATE CORE|INPUT",
-            AppPath::Progress => "CPU: 12%|LABEL\nRAM: 1.2GB|LABEL\nBACK TO MENU|ACTION",
-            AppPath::Settings => "THEME: DARK|ACTION\nUSER: ADMIN|INPUT\nVERSION: 3.0|LABEL",
+    pub fn get_ai_menu(input: &str) -> String {
+        let input_lc = input.to_lowercase();
+        
+        // Logika "Otak" AI Sederhana
+        if input_lc.contains("engine") || input_lc.contains("mesin") {
+            "START ENGINE|ACTION\nSTOP ENGINE|ACTION\nBACK|GOTO:1".to_string()
+        } else if input_lc.contains("zamera") || input_lc.contains("foto") {
+            "OPEN CAMERA|ACTION\nFLASH MODE|ACTION\nBACK|GOTO:1".to_string()
+        } else if input_lc.contains("status") {
+            "CPU OPTIMAL|LABEL\nRAM STABLE|LABEL\nBACK|GOTO:1".to_string()
+        } else {
+            // Default Menu jika AI tidak mengenali perintah
+            "TRAINING CORE\nSYSTEM CHECK\nAI SYNC".to_string()
         }
     }
 }

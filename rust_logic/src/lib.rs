@@ -3,34 +3,28 @@ use jni::objects::{JClass, JString};
 use jni::sys::{jint, jstring};
 use jni::JNIEnv;
 use crate::ui::pages::AppPath;
-use crate::ui::styles;
 
-static mut NOTIF: &str = "XPIZ READY";
+static mut NOTIF: &str = "AI AWAKE";
+static mut LAST_INPUT: String = String::new();
 
 #[no_mangle]
 pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getSystemConfig(mut env: JNIEnv, _class: JClass, key: jstring) -> jstring {
     let k: String = env.get_string(&unsafe { JString::from_raw(key) }).unwrap().into();
     let res = match k.as_str() {
-        "LOGO" => "XPIZ",
+        "LOGO" => "XPIZ-AI",
         "NOTIF" => unsafe { NOTIF },
-        "NAVBAR" => "TRAINING|PROGRESS",
-        "COLOR_GELAP" => styles::GELAP,
+        "NAVBAR" => "AI-HOME|METRICS",
+        "COLOR_GELAP" => "#081512",
         _ => "",
     };
     env.new_string(res).unwrap().into_raw()
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getStyleConfig(env: JNIEnv, _class: JClass, id: jint) -> jstring {
-    // Logika warna navbar (ID 1=Training, 2=Progress)
-    let res = styles::get_nav_style(id <= 2);
-    env.new_string(res).unwrap().into_raw()
-}
-
-#[no_mangle]
-pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getContentFromRust(env: JNIEnv, _class: JClass, id: jint) -> jstring {
-    let page = AppPath::from_id(id);
-    env.new_string(page.get_content()).unwrap().into_raw()
+pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getContentFromRust(env: JNIEnv, _class: JClass, _id: jint) -> jstring {
+    // Isi konten sekarang diambil dari hasil analisa AI terhadap input terakhir
+    let ai_content = unsafe { AppPath::get_ai_menu(&LAST_INPUT) };
+    env.new_string(ai_content).unwrap().into_raw()
 }
 
 #[no_mangle]
@@ -38,18 +32,16 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_handleTouch(mut env: JNIEnv,
     let t: String = env.get_string(&unsafe { JString::from_raw(tag) }).unwrap().into();
     let v: String = env.get_string(&unsafe { JString::from_raw(val) }).unwrap().into();
     
-    let response = match t.as_str() {
-        "HEADER_CLICK" => "GOTO:99",
+    match t.as_str() {
         "SEND_INPUT" => {
-            if !v.is_empty() {
-                unsafe { NOTIF = Box::leak(format!("SENT: {}", v).into_boxed_str()); }
+            unsafe { 
+                LAST_INPUT = v.clone();
+                NOTIF = "AI PROCESSING..."; 
             }
-            "REFRESH"
+            "REFRESH".to_string()
         },
-        "BACK TO MENU" => "GOTO:1",
-        "NOTIF_CLICK" => { unsafe { NOTIF = "XPIZ SYNCED"; } "REFRESH" },
-        _ => "NONE",
+        _ => "NONE".to_string(),
     };
     
-    env.new_string(response).unwrap().into_raw()
+    env.new_string("REFRESH").unwrap().into_raw()
 }
