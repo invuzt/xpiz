@@ -13,17 +13,10 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getSystemConfig(mut env: JNI
     let res = match k.as_str() {
         "LOGO" => "XPIZ",
         "NOTIF" => unsafe { NOTIF },
-        "NAVBAR" => "TRAINING|PROGRESS", // Tanpa Settings di sini
+        "NAVBAR" => "TRAINING|PROGRESS",
         "COLOR_GELAP" => styles::GELAP,
         _ => "",
     };
-    env.new_string(res).unwrap().into_raw()
-}
-
-#[no_mangle]
-pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getStyleConfig(env: JNIEnv, _class: JClass, id: jint) -> jstring {
-    // Kita anggap ID 1 & 2 adalah Navbar
-    let res = if id <= 2 { styles::get_nav_style(true) } else { styles::get_nav_style(false) };
     env.new_string(res).unwrap().into_raw()
 }
 
@@ -34,12 +27,20 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getContentFromRust(env: JNIE
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_handleTouch(mut env: JNIEnv, _class: JClass, input: jstring) -> jstring {
-    let txt: String = env.get_string(&unsafe { JString::from_raw(input) }).unwrap().into();
+pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_handleTouch(mut env: JNIEnv, _class: JClass, label: jstring, input_val: jstring) -> jstring {
+    let tag: String = env.get_string(&unsafe { JString::from_raw(label) }).unwrap().into();
+    let val: String = env.get_string(&unsafe { JString::from_raw(input_val) }).unwrap().into();
     
-    let response = match txt.as_str() {
-        "HEADER_CLICK" => "GOTO:99", // Masuk ke Settings
+    // Logika: Jika ada input, simpan ke Notif Header untuk pembuktian
+    let response = match tag.as_str() {
+        "HEADER_CLICK" => "GOTO:99",
         "BACK TO MENU" => "GOTO:1",
+        "START ENGINE" => {
+            if !val.is_empty() {
+                unsafe { NOTIF = Box::leak(format!("VAL: {}", val).into_boxed_str()); }
+            }
+            "REFRESH"
+        },
         "NOTIF_CLICK" => { unsafe { NOTIF = "SYNCED"; } "REFRESH" },
         _ => "NONE",
     };
