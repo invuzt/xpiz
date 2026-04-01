@@ -31,7 +31,9 @@ jobs:
           BUILD_TOOLS_PATH=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
           mkdir -p obj/java
+          # Kompilasi SEMUA file .java (*.java) termasuk BrikStyle
           javac -d obj/java -cp $PLATFORM_JAR src/com/invuzt/xpiz/*.java
+          # Buat classes.dex dari semua class di package
           $BUILD_TOOLS_PATH/d8 --release --lib $PLATFORM_JAR --output . obj/java/com/invuzt/xpiz/*.class
 
       - name: Assemble & Sign APK
@@ -39,24 +41,13 @@ jobs:
           BUILD_TOOLS_PATH=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
           
-          # Manifest Minimalis
-          echo '<?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.invuzt.xpiz">
-              <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34" />
-              <application android:hasCode="true" android:label="xpiz Mobile">
-                  <activity android:name=".MainActivity" android:exported="true">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>' > AndroidManifest.xml
+          # JANGAN TIMPA MANIFEST, Gunakan Manifest asli di root
+          # AAPT cuma bungkus sumber daya
+          $BUILD_TOOLS_PATH/aapt package -f -M AndroidManifest.xml -I $PLATFORM_JAR -F xpiz-temp.apk res/ || true
+          # Kalau res/ kosong, buat dummy
+          if [ ! -d "res" ]; then mkdir empty_res; $BUILD_TOOLS_PATH/aapt package -f -M AndroidManifest.xml -I $PLATFORM_JAR -F xpiz-temp.apk empty_res; fi
 
-          mkdir -p empty_res
-          $BUILD_TOOLS_PATH/aapt package -f -M AndroidManifest.xml -I $PLATFORM_JAR -F xpiz-temp.apk empty_res
-          
-          # Masukkan DEX dan Library Rust (.so)
+          # Masukkan DEX dan JNI (.so)
           zip -g xpiz-temp.apk classes.dex
           zip -g -r xpiz-temp.apk lib/
 
