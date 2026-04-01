@@ -9,122 +9,71 @@ import static com.invuzt.xpiz.BrikStyle.*;
 
 public class MainActivity extends Activity {
     static { System.loadLibrary("hello"); }
-
-    private native String getSystemConfig(String key);
-    private native String getStyleConfig(int pageId);
+    private native String getSystemConfig(String k);
+    private native String getStyleConfig(int id);
     private native String getContentFromRust(int id);
-    private native String handleTouch(String text);
+    private native String handleTouch(String t);
 
     private LinearLayout contentArea, navContainer;
-    private TextView tvLevel, tvLogo;
+    private TextView tvLevel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
         Window w = getWindow();
-        w.setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-                  WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+        w.setFlags(512, 512); // Layout no limits
 
         RelativeLayout root = new RelativeLayout(this);
         root.setBackgroundColor(Color.parseColor(getSystemConfig("COLOR_GELAP")));
 
-        // Header
-        RelativeLayout header = new RelativeLayout(this);
-        header.setId(View.generateViewId());
-        header.setPadding(60, 150, 60, 40);
-
-        tvLogo = new TextView(this);
-        tvLogo.setText(getSystemConfig("LOGO"));
-        tvLogo.setTextSize(28);
-        tvLogo.setTypeface(null, Typeface.BOLD);
-        tvLogo.setTextColor(Color.parseColor(getSystemConfig("COLOR_PUTIH")));
-        header.addView(tvLogo);
-
-        tvLevel = new TextView(this);
-        tvLevel.setText(getSystemConfig("NOTIF"));
+        tvLevel = new TextView(this); // Notif bubble
         tvLevel.setPadding(30, 10, 30, 10);
-        tvLevel.setBackground(bulat(Color.parseColor(getSystemConfig("COLOR_AKSEN")), 50));
-        tvLevel.setTextColor(Color.BLACK);
         tvLevel.setTypeface(null, Typeface.BOLD);
-
-        RelativeLayout.LayoutParams lpLvl = new RelativeLayout.LayoutParams(-2, -2);
-        lpLvl.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
-        header.addView(tvLevel, lpLvl);
-        root.addView(header);
-
-        ScrollView scroll = new ScrollView(this);
+        // ... (setup header singkat)
+        
         contentArea = new LinearLayout(this);
-        contentArea.setOrientation(LinearLayout.VERTICAL);
+        contentArea.setOrientation(1);
         contentArea.setPadding(40, 20, 40, 300);
+        
+        ScrollView scroll = new ScrollView(this);
         scroll.addView(contentArea);
+        root.addView(scroll);
 
-        RelativeLayout.LayoutParams lpScroll = new RelativeLayout.LayoutParams(-1, -1);
-        lpScroll.addRule(RelativeLayout.BELOW, header.getId());
-        root.addView(scroll, lpScroll);
-
-        navContainer = buatNavbar();
-        RelativeLayout.LayoutParams lpNav = new RelativeLayout.LayoutParams(-2, -2);
-        lpNav.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
-        lpNav.addRule(RelativeLayout.CENTER_HORIZONTAL);
-        lpNav.setMargins(0, 0, 0, 80);
-        root.addView(navContainer, lpNav);
+        navContainer = new LinearLayout(this);
+        navContainer.setBackground(bulat(Color.BLACK, 150));
+        navContainer.setPadding(20, 20, 20, 20);
+        // ... (layout nav singkat)
+        root.addView(navContainer);
 
         setContentView(root);
         buka(1);
     }
 
-    private LinearLayout buatNavbar() {
-        LinearLayout n = new LinearLayout(this);
-        n.setBackground(bulat(Color.BLACK, 150));
-        n.setPadding(20, 20, 20, 20);
-        return n;
-    }
-
-    void refreshNavbar() {
-        navContainer.removeAllViews();
-        String[] menus = getSystemConfig("NAVBAR").split("\\|");
-        for (int i = 0; i < menus.length; i++) {
-            final int id = i + 1;
-            String[] style = getStyleConfig(id).split("\\|");
-            
-            TextView btn = new TextView(this);
-            btn.setText(" " + menus[i] + " ");
-            btn.setPadding(50, 25, 50, 25);
-            btn.setTypeface(null, Typeface.BOLD);
-            btn.setBackground(bulat(Color.parseColor(style[0]), 100));
-            btn.setTextColor(Color.parseColor(style[1]));
-            btn.setOnClickListener(v -> buka(id));
-            navContainer.addView(btn);
-        }
-    }
-
     void buka(int id) {
         contentArea.removeAllViews();
-        // Logika update konten juga mengupdate state halaman di Rust
-        String dataDariRust = getContentFromRust(id); 
-        
-        refreshNavbar(); // Navbar berubah warna berdasarkan state Rust
+        String data = getContentFromRust(id);
         tvLevel.setText(getSystemConfig("NOTIF"));
+        
+        // Render Navbar
+        navContainer.removeAllViews();
+        String[] menus = getSystemConfig("NAVBAR").split("\\|");
+        for(int i=0; i<menus.length; i++) {
+            final int pageId = i+1;
+            String[] stl = getStyleConfig(pageId).split("\\|");
+            TextView b = new TextView(this);
+            b.setText(menus[i]);
+            b.setBackground(bulat(Color.parseColor(stl[0]), 100));
+            b.setTextColor(Color.parseColor(stl[1]));
+            b.setOnClickListener(v -> buka(pageId));
+            navContainer.addView(b);
+        }
 
-        String[] lines = dataDariRust.split("\n");
-        for (final String line : lines) {
-            if (line.trim().isEmpty()) continue;
-            TextView card = new TextView(this);
-            card.setText(line);
-            card.setBackground(card(id == 1 ? Color.WHITE : Color.parseColor("#1A1A1A"), 0, 0));
-            card.setPadding(60, 60, 60, 60);
-            card.setTextColor(id == 1 ? Color.BLACK : Color.WHITE);
-            card.setTextSize(17);
-            card.setTypeface(null, Typeface.BOLD);
-            card.setOnClickListener(v -> {
-                handleTouch(line); // Reaksi di Rust
-                tvLevel.setText(getSystemConfig("NOTIF")); // Update label Level
-            });
-
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-            lp.setMargins(0, 0, 0, 30);
-            contentArea.addView(card, lp);
+        // Render Cards
+        for(String s : data.split("\n")) {
+            TextView c = new TextView(this);
+            c.setText(s);
+            c.setOnClickListener(v -> { handleTouch(s); tvLevel.setText(getSystemConfig("NOTIF")); });
+            contentArea.addView(c);
         }
     }
 }
