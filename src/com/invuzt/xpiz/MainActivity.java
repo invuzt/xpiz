@@ -17,81 +17,104 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        RelativeLayout root = new RelativeLayout(this);
-        root.setBackgroundColor(Color.parseColor("#F7F9F8")); // Background luar agak putih/abu
-
-        // 1. Container Utama (Gelap)
-        LinearLayout mainCard = new LinearLayout(this);
-        mainCard.setOrientation(LinearLayout.VERTICAL);
-        mainCard.setBackground(bulat(GELAP, 120));
-        mainCard.setPadding(40, 80, 40, 80);
+        Window w = getWindow();
+        w.setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, 
+                  WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
         
-        RelativeLayout.LayoutParams mainParams = new RelativeLayout.LayoutParams(-1, -1);
-        mainParams.setMargins(20, 20, 20, 250); // Kasih ruang buat navbar bawah
-        root.addView(mainCard, mainParams);
+        RelativeLayout root = new RelativeLayout(this);
+        root.setBackgroundColor(GELAP);
 
-        // Logo
+        // Header
+        RelativeLayout header = new RelativeLayout(this);
+        header.setId(View.generateViewId());
+        header.setPadding(60, 150, 60, 40);
+
         TextView logo = new TextView(this);
         logo.setText("BRIK®");
         logo.setTextSize(28);
+        logo.setTypeface(null, Typeface.BOLD);
         logo.setTextColor(PUTIH);
-        logo.setPadding(40, 0, 0, 40);
-        mainCard.addView(logo);
+        header.addView(logo);
 
-        // Area Konten (Hasil dari Rust)
+        TextView level = new TextView(this);
+        level.setText("71 LEVEL");
+        level.setPadding(30, 10, 30, 10);
+        level.setBackground(bulat(AKSEN, 50));
+        level.setTextColor(Color.BLACK);
+        level.setTypeface(null, Typeface.BOLD);
+        
+        RelativeLayout.LayoutParams lpLvl = new RelativeLayout.LayoutParams(-2, -2);
+        lpLvl.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+        header.addView(level, lpLvl);
+        root.addView(header);
+
+        // Scrollable Content
+        ScrollView scroll = new ScrollView(this);
         contentArea = new LinearLayout(this);
         contentArea.setOrientation(LinearLayout.VERTICAL);
-        mainCard.addView(contentArea);
+        contentArea.setPadding(40, 20, 40, 300);
+        scroll.addView(contentArea);
 
-        // 2. Navbar Bawah (Hitam)
-        LinearLayout nav = new LinearLayout(this);
-        nav.setBackground(bulat(Color.BLACK, 150));
-        nav.setPadding(20, 20, 20, 20);
-        nav.setGravity(Gravity.CENTER);
+        RelativeLayout.LayoutParams lpScroll = new RelativeLayout.LayoutParams(-1, -1);
+        lpScroll.addRule(RelativeLayout.BELOW, header.getId());
+        root.addView(scroll, lpScroll);
 
-        bProg = buatNavBtn(" PROGRESS ");
-        bTrain = buatNavBtn(" TRAINING ");
-        
-        bProg.setOnClickListener(v -> buka(2));
-        bTrain.setOnClickListener(v -> buka(1));
-
-        nav.addView(bProg);
-        nav.addView(bTrain);
-
-        RelativeLayout.LayoutParams navP = new RelativeLayout.LayoutParams(-2, -2);
-        navP.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
-        navP.addRule(RelativeLayout.CENTER_HORIZONTAL);
-        navP.setMargins(0, 0, 0, 60);
-        root.addView(nav, navP);
+        // Navbar
+        LinearLayout nav = buatNavbar();
+        RelativeLayout.LayoutParams lpNav = new RelativeLayout.LayoutParams(-2, -2);
+        lpNav.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+        lpNav.addRule(RelativeLayout.CENTER_HORIZONTAL);
+        lpNav.setMargins(0, 0, 0, 80);
+        root.addView(nav, lpNav);
 
         setContentView(root);
         buka(1);
     }
 
-    private TextView buatNavBtn(String txt) {
-        TextView tv = new TextView(this);
-        tv.setText(txt);
-        tv.setPadding(60, 35, 60, 35);
+    private LinearLayout buatNavbar() {
+        LinearLayout n = new LinearLayout(this);
+        n.setBackground(bulat(Color.BLACK, 150));
+        n.setPadding(15, 15, 15, 15);
+        bProg = new TextView(this); bProg.setText(" PROGRESS ");
+        bTrain = new TextView(this); bTrain.setText(" TRAINING ");
+        configBtn(bProg, 2); configBtn(bTrain, 1);
+        n.addView(bProg); n.addView(bTrain);
+        return n;
+    }
+
+    private void configBtn(TextView tv, int id) {
+        tv.setPadding(50, 30, 50, 30);
         tv.setTypeface(null, Typeface.BOLD);
-        return tv;
+        tv.setOnClickListener(v -> buka(id));
     }
 
     void buka(int id) {
         contentArea.removeAllViews();
-        // Update Style Tombol Nav
         bProg.setBackground(id == 2 ? bulat(AKSEN, 100) : null);
         bProg.setTextColor(id == 2 ? Color.BLACK : Color.GRAY);
         bTrain.setBackground(id == 1 ? bulat(AKSEN, 100) : null);
         bTrain.setTextColor(id == 1 ? Color.BLACK : Color.GRAY);
 
-        // Card dari Rust
-        TextView card = new TextView(this);
-        card.setText(getContentFromRust(id));
-        card.setBackground(card(PUTIH, Color.BLACK, 3)); // Card putih dengan border hitam
-        card.setPadding(60, 60, 60, 60);
-        card.setTextColor(Color.BLACK);
-        card.setTextSize(18);
+        // --- SEKARANG DATA DIAMBIL DARI RUST ---
+        String dataDariRust = getContentFromRust(id);
         
-        contentArea.addView(card);
+        // Kita pecah string dari Rust (per baris) biar jadi card-card cantik
+        String[] lines = dataDariRust.split("\n");
+        for (String line : lines) {
+            if (line.trim().isEmpty()) continue;
+
+            TextView card = new TextView(this);
+            card.setText(line);
+            // Training (ID 1) pakai Card Putih, Progress (ID 2) pakai Card Gelap
+            card.setBackground(card(id == 1 ? PUTIH : ABU_TUA, Color.TRANSPARENT, 0));
+            card.setPadding(60, 60, 60, 60);
+            card.setTextColor(id == 1 ? Color.BLACK : PUTIH);
+            card.setTextSize(18);
+            card.setTypeface(null, Typeface.BOLD);
+            
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+            lp.setMargins(0, 0, 0, 30);
+            contentArea.addView(card, lp);
+        }
     }
 }
