@@ -4,10 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-name = "hello" # INI HARUS 'hello' biar jadi libhello.so
-crate-type = ["cdylib"]
+crate-type = ["staticlib"]
 
 [dependencies]
 jni = "0.21"
-
-# Trigger Build Baru
+# Library AI paling ringan untuk mobile
+tflite = "0.9.1" 

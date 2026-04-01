@@ -2,36 +2,34 @@ use jni::objects::JClass;
 use jni::sys::{jint, jstring};
 use jni::JNIEnv;
 
+// Fungsi simulasi AI (Nanti bisa baca file .tflite di assets)
+fn hitung_ai_personal(id: i32) -> String {
+    let base_xp = 4500;
+    
+    match id {
+        1 => {
+            // Logika AI Training: Memberikan target dinamis
+            let target = 240 - 15;
+            format!("XPIZ AI PREDICTION:\n- Focus: Speed Reaction\n- Target: {}ms\n- Status: High Potential", target)
+        },
+        2 => {
+            // Logika AI Progress: Menghitung sisa level
+            let percent = (base_xp as f32 / 5000.0) * 100.0;
+            format!("AI PERFORMANCE REPORT:\n- Rank: ELITE\n- Efficiency: {:.1}%\n- Forecast: Level Up Soon", percent)
+        },
+        _ => "XPIZ System Stable".to_string(),
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getContentFromRust(
     mut env: JNIEnv,
     _class: JClass,
     page_id: jint,
 ) -> jstring {
-    // --- MINI AI ENGINE ---
-    let user_xp: i32 = 4500;
-    let reaction_speed: i32 = 240; // ms
-    
-    let ai_response = match page_id {
-        1 => {
-            // AI di Mode Training
-            format!(
-                "XPIZ AI ANALYTICS:\n                 - Status: Optimal Performance\n                 - Target: Beat {}ms\n                 - Recommendation: Focus on Speed", 
-                reaction_speed - 15
-            )
-        },
-        2 => {
-            // AI di Mode Progress
-            let rank = if user_xp > 4000 { "ELITE" } else { "ROOKIE" };
-            let next_lv = 5000 - user_xp;
-            format!(
-                "PERFORMANCE DATA:\n                 - Rank: {}\n                 - Power Level: {:.1}\n                 - To Next Level: {} XP", 
-                rank, (user_xp as f32 / 100.0), next_lv
-            )
-        },
-        _ => "XPIZ Core Online. System Secure.".to_string(),
-    };
+    // Memanggil fungsi AI di atas
+    let content = hitung_ai_personal(page_id as i32);
 
-    let output = env.new_string(ai_response).expect("Failed to create Java string");
+    let output = env.new_string(content).expect("Gagal buat string");
     output.into_raw()
 }
