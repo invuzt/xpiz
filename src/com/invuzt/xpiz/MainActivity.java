@@ -8,130 +8,104 @@ import android.widget.*;
 import static com.invuzt.xpiz.BrikStyle.*;
 
 public class MainActivity extends Activity {
+    // Load Library Rust
     static { System.loadLibrary("hello"); }
-    private native String getHelloFromRust();
+    private native String getContentFromRust(int pageId);
 
     private LinearLayout contentArea;
     private TextView btnProg, btnTrain, btnAbout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // PENTING: Inisialisasi tema dulu
-        BrikStyle.updateTheme(this);
         super.onCreate(savedInstanceState);
-        
-        Window w = getWindow();
-        int flags = View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
-        
-        // Jika Light Mode, buat ikon status bar jadi gelap (biar kelihatan)
-        if (CL_TEXT_PRIMARY == Color.BLACK) {
-            flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-        }
-        
-        w.getDecorView().setSystemUiVisibility(flags);
-        w.setStatusBarColor(CL_BLACK);
 
         RelativeLayout root = new RelativeLayout(this);
-        root.setBackgroundColor(CL_BG_OUTER);
+        root.setBackgroundColor(BG);
 
-        LinearLayout mainFrame = new LinearLayout(this);
-        mainFrame.setOrientation(LinearLayout.VERTICAL);
-        mainFrame.setBackgroundColor(CL_BLACK); 
-        root.addView(mainFrame, new RelativeLayout.LayoutParams(-1, -1));
+        // Logo
+        TextView logo = new TextView(this);
+        logo.setText(BRAND); logo.setTextSize(26); logo.setTextColor(PUTIH);
+        logo.setPadding(60, 130, 0, 0);
+        root.addView(logo);
 
-        addHeader(mainFrame);
-
-        ScrollView sv = new ScrollView(this);
-        sv.setVerticalScrollBarEnabled(false);
-        mainFrame.addView(sv);
-
+        // Wadah Konten
         contentArea = new LinearLayout(this);
         contentArea.setOrientation(LinearLayout.VERTICAL);
-        contentArea.setPadding(PAD_SCREEN, 20, PAD_SCREEN, 400); 
-        sv.addView(contentArea);
+        contentArea.setPadding(60, 250, 60, 0);
+        root.addView(contentArea);
 
-        addBottomNav(root);
-        drawTrainingUI();
+        buatNavigasi(root);
+        bukaTraining(); // Default
         setContentView(root);
     }
 
-    private void addHeader(LinearLayout p) {
-        RelativeLayout h = new RelativeLayout(this);
-        h.setPadding(PAD_SCREEN, 130, PAD_SCREEN, 40);
-        TextView logo = new TextView(this);
-        logo.setText(BRAND_NAME); logo.setTextSize(26); 
-        logo.setTextColor(CL_TEXT_PRIMARY); // Adaptif
-        h.addView(logo);
-        p.addView(h);
-    }
-
-    private void drawTrainingUI() {
+    // --- HALAMAN 1: AMBIL DARI RUST (ID 1) ---
+    void bukaTraining() {
         contentArea.removeAllViews();
-        updateTabStyles(false, true, false);
-        contentArea.addView(createWhiteCard(contentArea, "Rhythm match"));
-        space(contentArea, 20);
-        contentArea.addView(createWhiteCard(contentArea, "Sequence rush"));
+        updateWarnaTombol(false, true, false);
+
+        TextView t = new TextView(this);
+        t.setText(getContentFromRust(1)); // Panggil Rust
+        t.setTextColor(PUTIH); t.setTextSize(18);
+        contentArea.addView(t);
     }
 
-    private void drawProgressUI() {
+    // --- HALAMAN 2: AMBIL DARI RUST (ID 2) ---
+    void bukaProgress() {
         contentArea.removeAllViews();
-        updateTabStyles(true, false, false);
-        contentArea.addView(createStatCard(contentArea, "Total XP", "4,250"));
-        space(contentArea, 20);
-        contentArea.addView(createStatCard(contentArea, "Rust Native", getHelloFromRust()));
+        updateWarnaTombol(true, false, false);
+
+        TextView t = new TextView(this);
+        t.setText(getContentFromRust(2)); // Panggil Rust
+        t.setTextColor(PUTIH); t.setTextSize(18);
+        contentArea.addView(t);
     }
 
-    private void drawAboutUI() {
+    // --- HALAMAN 3: TULIS LANGSUNG DI JAVA ---
+    void bukaAbout() {
         contentArea.removeAllViews();
-        updateTabStyles(false, false, true);
-        TextView title = new TextView(this);
-        title.setText("About " + BRAND_NAME); 
-        title.setTextColor(CL_TEXT_PRIMARY); title.setTextSize(24);
-        contentArea.addView(title);
-        space(contentArea, 40);
-        TextView desc = new TextView(this);
-        desc.setText("XPIZ Mobile v1.0\nPonorogo Digital Works");
-        desc.setTextColor(Color.GRAY);
-        contentArea.addView(desc);
+        updateWarnaTombol(false, false, true);
+
+        TextView t = new TextView(this);
+        t.setText("About " + BRAND + "\n\nBuild: 2026.04\nPlatform: Rust Hybrid\nLoc: Ponorogo");
+        t.setTextColor(PUTIH); t.setTextSize(18);
+        contentArea.addView(t);
     }
 
-    private void updateTabStyles(boolean isP, boolean isT, boolean isA) {
-        btnProg.setBackground(isP ? round(CL_ACCENT, RADIUS_NAV) : null);
-        btnProg.setTextColor(isP ? (CL_TEXT_PRIMARY == Color.BLACK ? Color.WHITE : Color.BLACK) : CL_TEXT_PRIMARY);
-        
-        btnTrain.setBackground(isT ? round(CL_ACCENT, RADIUS_NAV) : null);
-        btnTrain.setTextColor(isT ? (CL_TEXT_PRIMARY == Color.BLACK ? Color.WHITE : Color.BLACK) : CL_TEXT_PRIMARY);
-        
-        btnAbout.setBackground(isA ? round(CL_ACCENT, RADIUS_NAV) : null);
-        btnAbout.setTextColor(isA ? (CL_TEXT_PRIMARY == Color.BLACK ? Color.WHITE : Color.BLACK) : CL_TEXT_PRIMARY);
+    void updateWarnaTombol(boolean isP, boolean isT, boolean isA) {
+        btnProg.setBackground(isP ? bulat(AKSEN, 80) : null);
+        btnProg.setTextColor(isP ? Color.BLACK : PUTIH);
+        btnTrain.setBackground(isT ? bulat(AKSEN, 80) : null);
+        btnTrain.setTextColor(isT ? Color.BLACK : PUTIH);
+        btnAbout.setBackground(isA ? bulat(AKSEN, 80) : null);
+        btnAbout.setTextColor(isA ? Color.BLACK : PUTIH);
     }
 
-    private void addBottomNav(RelativeLayout root) {
-        LinearLayout navWrap = new LinearLayout(this);
-        // Navigasi tetap hitam pekat biar kontras, atau bisa Mas ganti CL_BLACK
-        navWrap.setBackground(round(Color.BLACK, 100));
-        navWrap.setPadding(10, 10, 10, 10);
-        navWrap.setGravity(Gravity.CENTER);
+    void buatNavigasi(RelativeLayout root) {
+        LinearLayout nav = new LinearLayout(this);
+        nav.setBackground(bulat(Color.BLACK, 100));
+        nav.setPadding(10, 10, 10, 10);
+        nav.setGravity(Gravity.CENTER);
 
-        btnProg = new TextView(this); btnProg.setText("PROGRESS");
+        btnProg = new TextView(this); btnProg.setText(" PROGRESS ");
         btnProg.setPadding(40, 30, 40, 30);
-        btnProg.setOnClickListener(v -> drawProgressUI());
-        navWrap.addView(btnProg);
+        btnProg.setOnClickListener(v -> bukaProgress());
+        nav.addView(btnProg);
 
-        btnTrain = new TextView(this); btnTrain.setText("TRAINING");
+        btnTrain = new TextView(this); btnTrain.setText(" TRAINING ");
         btnTrain.setPadding(40, 30, 40, 30);
-        btnTrain.setOnClickListener(v -> drawTrainingUI());
-        navWrap.addView(btnTrain);
+        btnTrain.setOnClickListener(v -> bukaTraining());
+        nav.addView(btnTrain);
 
         btnAbout = new TextView(this); btnAbout.setText(" ••• ");
         btnAbout.setPadding(40, 30, 40, 30);
-        btnAbout.setOnClickListener(v -> drawAboutUI());
-        navWrap.addView(btnAbout);
+        btnAbout.setOnClickListener(v -> bukaAbout());
+        nav.addView(btnAbout);
 
         RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(-2, -2);
-        lp.addRule(RelativeLayout.CENTER_HORIZONTAL);
         lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
-        lp.setMargins(0, 0, 0, 60);
-        root.addView(navWrap, lp);
+        lp.addRule(RelativeLayout.CENTER_HORIZONTAL);
+        lp.setMargins(0, 0, 0, 80);
+        root.addView(nav, lp);
     }
 }
