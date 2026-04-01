@@ -2,6 +2,7 @@ package com.invuzt.xpiz;
 
 import android.app.Activity;
 import android.graphics.*;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.*;
 import android.widget.*;
@@ -18,16 +19,18 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // Root Abu-abu
+        // Root Abu-abu (Outer)
         RelativeLayout root = new RelativeLayout(this);
         root.setBackgroundColor(CL_BG_OUTER);
         root.setPadding(30, 30, 30, 30);
 
-        // Container Hitam Utama
+        // Container Hitam Utama (Inner)
         LinearLayout mainFrame = new LinearLayout(this);
         mainFrame.setOrientation(LinearLayout.VERTICAL);
         mainFrame.setBackground(round(CL_BLACK, 110));
-        root.addView(mainFrame, new RelativeLayout.LayoutParams(-1, -1));
+        
+        RelativeLayout.LayoutParams lpFrame = new RelativeLayout.LayoutParams(-1, -1);
+        root.addView(mainFrame, lpFrame);
 
         // 1. Header (BRIK & Level)
         addBrikHeader(mainFrame);
@@ -39,10 +42,10 @@ public class MainActivity extends Activity {
 
         contentArea = new LinearLayout(this);
         contentArea.setOrientation(LinearLayout.VERTICAL);
-        contentArea.setPadding(40, 20, 40, 250);
+        contentArea.setPadding(40, 20, 40, 300);
         sv.addView(contentArea);
 
-        // 3. Bottom Navigation
+        // 3. Bottom Navigation (Melayang)
         addBottomNav(root);
 
         drawTrainingUI();
@@ -91,7 +94,7 @@ public class MainActivity extends Activity {
 
             TextView arrow = new TextView(this);
             arrow.setText(">");
-            arrow.setAlpha(0.5f);
+            arrow.setTextColor(Color.GRAY);
             RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(-2, -2);
             lp.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
             card.addView(arrow, lp);
@@ -102,8 +105,7 @@ public class MainActivity extends Activity {
 
         space(contentArea, 10);
 
-        // SEQUENCE RUSH SECTION (3 Bagian)
-        // Part 1: Header (Top Round)
+        // SEQUENCE RUSH SECTION
         TextView rushH = new TextView(this);
         rushH.setText("Sequence rush          v");
         rushH.setPadding(60, 50, 60, 50);
@@ -111,17 +113,14 @@ public class MainActivity extends Activity {
         rushH.setTextColor(Color.WHITE);
         contentArea.addView(rushH);
 
-        // Part 2: Scores (No Round)
         LinearLayout scoreBox = new LinearLayout(this);
         scoreBox.setPadding(60, 40, 60, 60);
         scoreBox.setBackgroundColor(CL_DARK_CARD);
         scoreBox.setWeightSum(2);
-        
         scoreBox.addView(createScoreItem("Best score", "2,435"));
         scoreBox.addView(createScoreItem("Reaction speed", "319 ms"));
         contentArea.addView(scoreBox);
 
-        // Part 3: Progress (Bottom Round)
         LinearLayout progBox = new LinearLayout(this);
         progBox.setOrientation(LinearLayout.VERTICAL);
         progBox.setPadding(60, 40, 60, 70);
@@ -135,15 +134,11 @@ public class MainActivity extends Activity {
 
         space(contentArea, 40);
 
-        // START & VIEW LEADERS
+        // Tombol START & VIEW
         LinearLayout actions = new LinearLayout(this);
         actions.setWeightSum(2);
-        
-        TextView btnStart = createActionButton("START GAME", CL_ACCENT, Color.BLACK);
-        TextView btnView = createActionButton("VIEW LEADERS", Color.TRANSPARENT, Color.WHITE);
-        
-        actions.addView(btnStart);
-        actions.addView(btnView);
+        actions.addView(createActionButton("START GAME", CL_ACCENT, Color.BLACK));
+        actions.addView(createActionButton("VIEW LEADERS", Color.TRANSPARENT, Color.WHITE));
         contentArea.addView(actions);
     }
 
@@ -151,11 +146,9 @@ public class MainActivity extends Activity {
         LinearLayout l = new LinearLayout(this);
         l.setOrientation(LinearLayout.VERTICAL);
         l.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1));
-        
         TextView t1 = new TextView(this);
         t1.setText(label); t1.setTextColor(Color.GRAY); t1.setTextSize(12);
         l.addView(t1);
-        
         TextView t2 = new TextView(this);
         t2.setText(val); t2.setTextColor(Color.WHITE); t2.setTextSize(26);
         t2.setTypeface(Typeface.DEFAULT_BOLD);
@@ -173,6 +166,7 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1);
         lp.setMargins(10, 0, 10, 0);
         b.setLayoutParams(lp);
+        
         if(bg == Color.TRANSPARENT) {
             GradientDrawable gd = new GradientDrawable();
             gd.setStroke(3, Color.GRAY);
@@ -185,29 +179,29 @@ public class MainActivity extends Activity {
     }
 
     private void addBottomNav(RelativeLayout root) {
-        LinearLayout nav = new LinearLayout(this);
-        nav.setBackground(round(Color.BLACK, 100));
-        nav.setPadding(10, 10, 10, 10);
-        nav.setGravity(Gravity.CENTER);
+        LinearLayout navWrap = new LinearLayout(this);
+        navWrap.setBackground(round(Color.BLACK, 100));
+        navWrap.setPadding(10, 10, 10, 10);
+        navWrap.setGravity(Gravity.CENTER);
 
-        btnProg = new TextView(this);
-        btnProg.setText("PROGRESS");
-        btnProg.setPadding(50, 30, 50, 30);
-        btnProg.setTextColor(Color.WHITE);
-        nav.addView(btnProg);
+        TextView p = new TextView(this);
+        p.setText("PROGRESS");
+        p.setPadding(50, 30, 50, 30);
+        p.setTextColor(Color.WHITE);
+        navWrap.addView(p);
 
-        btnTrain = new TextView(this);
-        btnTrain.setText("TRAINING");
-        btnTrain.setPadding(50, 30, 50, 30);
-        btnTrain.setBackground(round(CL_ACCENT, 80));
-        btnTrain.setTextColor(Color.BLACK);
-        btnTrain.setTypeface(Typeface.DEFAULT_BOLD);
-        nav.addView(btnTrain);
+        TextView t = new TextView(this);
+        t.setText("TRAINING");
+        t.setPadding(50, 30, 50, 30);
+        t.setBackground(round(CL_ACCENT, 80));
+        t.setTextColor(Color.BLACK);
+        t.setTypeface(Typeface.DEFAULT_BOLD);
+        navWrap.addView(t);
 
         RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(-2, -2);
         lp.addRule(RelativeLayout.CENTER_HORIZONTAL);
         lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
         lp.setMargins(0, 0, 0, 60);
-        root.addView(nav, lp);
+        root.addView(navWrap, lp);
     }
 }
