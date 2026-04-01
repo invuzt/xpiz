@@ -5,6 +5,7 @@ import android.os.*;
 import android.widget.*;
 import android.view.*;
 import android.graphics.*;
+import android.text.*;
 
 public class MainActivity extends Activity {
     static { System.loadLibrary("hello"); }
@@ -12,7 +13,7 @@ public class MainActivity extends Activity {
 
     private TextView terminalOutput;
     private EditText commandInput;
-    private ScrollView scrollView;
+    private String nextAiPrediction = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -20,61 +21,63 @@ public class MainActivity extends Activity {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.BLACK);
-        root.setPadding(20, 40, 20, 20);
+        root.setPadding(30, 50, 30, 30);
 
         terminalOutput = new TextView(this);
         terminalOutput.setTextColor(Color.parseColor("#00FF41"));
         terminalOutput.setTypeface(Typeface.MONOSPACE);
-        terminalOutput.setText("--- XPIZ-LANG INTERPRETER v0.1 ---\n> SYSTEM_READY\n\n");
+        terminalOutput.setText("--- XPIZ-LANG AI-ENGINE [AUTO-EXPAND ON] ---\n\n");
         
-        scrollView = new ScrollView(this);
-        scrollView.addView(terminalOutput);
-        root.addView(scrollView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f));
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(terminalOutput);
+        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1.0f));
 
         commandInput = new EditText(this);
         commandInput.setTextColor(Color.WHITE);
-        commandInput.setHint("xpiz@admin:~$ ");
-        commandInput.setHintTextColor(Color.DKGRAY);
-        commandInput.setBackgroundColor(Color.TRANSPARENT);
+        commandInput.setHint("type here...");
+        commandInput.setHintTextColor(Color.GRAY);
+        commandInput.setBackgroundColor(Color.parseColor("#1A1A1A"));
         commandInput.setTypeface(Typeface.MONOSPACE);
-        commandInput.setSingleLine(true);
-        root.addView(commandInput);
+        
+        // Fitur Auto-Expand: Klik prediksi AI untuk memasukkannya otomatis
+        commandInput.setOnLongClickListener(v -> {
+            if (!nextAiPrediction.equals("NONE")) {
+                commandInput.setText(nextAiPrediction);
+                commandInput.setSelection(nextAiPrediction.length());
+                Toast.makeText(this, "AI Sugestion Applied", Toast.LENGTH_SHORT).show();
+            }
+            return true;
+        });
 
         commandInput.setOnEditorActionListener((v, actionId, event) -> {
             String fullCmd = commandInput.getText().toString().trim();
             if (!fullCmd.isEmpty()) {
-                appendToTerminal("\n$ " + fullCmd);
-                String res = predictBestButton(fullCmd);
-                if (res.startsWith("STATUS")) {
-                    handleStatus(res);
-                } else {
-                    appendToTerminal("\n" + res);
-                }
+                execute(fullCmd);
                 commandInput.setText("");
             }
             return true;
         });
+        root.addView(commandInput);
         setContentView(root);
     }
 
-    private void handleStatus(String raw) {
-        String[] p = raw.split("\\|");
-        int k = Integer.parseInt(p[1]);
-        int s = Integer.parseInt(p[2]);
-        int t = Integer.parseInt(p[4]);
-        appendToTerminal("\n--- XPIZ-LANG ANALYTICS ---\nKOPI  [" + getBar(k, t) + "] " + k + "\nSABUN [" + getBar(s, t) + "] " + s + "\n---------------------------");
-    }
+    private void execute(String cmd) {
+        terminalOutput.append("\n$ " + cmd);
+        String raw = predictBestButton(cmd);
+        
+        // Memisahkan Respon dan Prediksi
+        String[] parts = raw.split("\\|");
+        String response = parts[0];
+        nextAiPrediction = parts[1];
 
-    private String getBar(int v, int t) {
-        int len = 10;
-        int f = (v * len) / (t > 0 ? t : 1);
-        StringBuilder b = new StringBuilder();
-        for (int i=0; i<len; i++) b.append(i<f ? "█" : "░");
-        return b.toString();
-    }
+        if (response.startsWith("STATUS")) {
+            terminalOutput.append("\n[SYS]: Analysis Complete. Hold input to use AI Suggestion.");
+        } else {
+            terminalOutput.append("\n> " + response);
+        }
 
-    private void appendToTerminal(String t) {
-        terminalOutput.append(t);
-        scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN));
+        if (!nextAiPrediction.equals("NONE")) {
+            terminalOutput.append("\n[AI SUGGESTION]: " + nextAiPrediction + " (Long press input to apply)");
+        }
     }
 }
