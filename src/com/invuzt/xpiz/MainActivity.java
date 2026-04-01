@@ -5,104 +5,62 @@ import android.os.*;
 import android.widget.*;
 import android.view.*;
 import android.graphics.*;
-import android.text.*;
 
 public class MainActivity extends Activity {
     static { System.loadLibrary("hello"); }
     private native String predictBestButton(String cmd);
 
-    private TextView terminalOutput;
-    private EditText commandInput;
-    private String ghostText = "";
+    private TextView logView, trendView;
+    private EditText inputField;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.BLACK);
-        root.setPadding(30, 50, 30, 30);
+        root.setBackgroundColor(Color.parseColor("#0A0A0A"));
+        root.setPadding(40, 60, 40, 40);
 
-        terminalOutput = new TextView(this);
-        terminalOutput.setTextColor(Color.parseColor("#00FF41"));
-        terminalOutput.setTypeface(Typeface.MONOSPACE);
-        terminalOutput.setText("--- ODFIZ XPIZ AI [GHOST_INPUT_ENABLED] ---\n\n");
-        
-        ScrollView scroll = new ScrollView(this);
-        scroll.addView(terminalOutput);
-        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1.0f));
+        // Header Dashboard
+        TextView header = new TextView(this);
+        header.setText("ODFIZ PREDICTIVE ENGINE v3.0");
+        header.setTextColor(Color.CYAN);
+        header.setTextSize(18);
+        header.setTypeface(Typeface.DEFAULT_BOLD);
+        root.addView(header);
 
-        // Area Input dengan tombol TAB
-        LinearLayout inputLayout = new LinearLayout(this);
-        inputLayout.setOrientation(LinearLayout.HORIZONTAL);
-        inputLayout.setBackgroundColor(Color.parseColor("#121212"));
+        // Layar Trend (Live Analysis)
+        trendView = new TextView(this);
+        trendView.setBackgroundColor(Color.parseColor("#1A1A1A"));
+        trendView.setPadding(20, 20, 20, 20);
+        trendView.setTextColor(Color.YELLOW);
+        trendView.setText("TREND: WAITING FOR DATA...");
+        root.addView(trendView);
 
-        commandInput = new EditText(this);
-        commandInput.setTextColor(Color.WHITE);
-        commandInput.setHint("xpiz@admin:~$ ");
-        commandInput.setHintTextColor(Color.DKGRAY);
-        commandInput.setBackgroundColor(Color.TRANSPARENT);
-        commandInput.setTypeface(Typeface.MONOSPACE);
-        commandInput.setSingleLine(true);
-        
-        // Tombol TAB Modern
-        Button tabBtn = new Button(this);
-        tabBtn.setText("TAB");
-        tabBtn.setTextColor(Color.CYAN);
-        tabBtn.setBackgroundColor(Color.parseColor("#222222"));
-        tabBtn.setOnClickListener(v -> applyGhostText());
+        // Log Terminal
+        logView = new TextView(this);
+        logView.setTextColor(Color.parseColor("#00FF41"));
+        logView.setTypeface(Typeface.MONOSPACE);
+        root.addView(logView, new LinearLayout.LayoutParams(-1, 0, 1.0f));
 
-        inputLayout.addView(commandInput, new LinearLayout.LayoutParams(0, -2, 1.0f));
-        inputLayout.addView(tabBtn, new LinearLayout.LayoutParams(150, -2));
-        root.addView(inputLayout);
+        inputField = new EditText(this);
+        inputField.setHint("Masukkan angka stok/data...");
+        inputField.setTextColor(Color.WHITE);
+        inputField.setHintTextColor(Color.GRAY);
+        root.addView(inputField);
 
-        // LOGIKA GHOST TEXT: Muncul saat mengetik
-        commandInput.addTextChangedListener(new TextWatcher() {
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                String input = s.toString().trim();
-                if (!input.isEmpty()) {
-                    // Tanya Rust: "Kalau saya ngetik ini, prediksinya apa?"
-                    String raw = predictBestButton(input);
-                    String[] parts = raw.split("\\|");
-                    if (parts.length >= 2 && !parts[1].equals("NONE")) {
-                        ghostText = parts[1];
-                        // Menampilkan petunjuk abu-abu di hint
-                        commandInput.setHint(input + " (" + ghostText + ")");
-                    } else {
-                        ghostText = "";
-                        commandInput.setHint("xpiz@admin:~$ ");
-                    }
-                }
-            }
-            public void afterTextChanged(Editable s) {}
-        });
-
-        commandInput.setOnEditorActionListener((v, actionId, event) -> {
-            String fullCmd = commandInput.getText().toString().trim();
-            if (!fullCmd.isEmpty()) {
-                execute(fullCmd);
-                commandInput.setText("");
-                commandInput.setHint("xpiz@admin:~$ ");
+        inputField.setOnEditorActionListener((v, aId, event) -> {
+            String in = inputField.getText().toString();
+            if(!in.isEmpty()){
+                String res = predictBestButton(in);
+                String[] p = res.split("\\|");
+                trendView.setText(p[0]);
+                logView.append("\n[IN]: " + in + " -> " + (p.length > 1 ? p[1] : "Calculating..."));
+                inputField.setText("");
             }
             return true;
         });
 
         setContentView(root);
-    }
-
-    private void applyGhostText() {
-        if (!ghostText.isEmpty()) {
-            commandInput.setText(ghostText);
-            commandInput.setSelection(ghostText.length());
-        }
-    }
-
-    private void execute(String cmd) {
-        terminalOutput.append("\n$ " + cmd);
-        String raw = predictBestButton(cmd);
-        String[] parts = raw.split("\\|");
-        terminalOutput.append("\n> " + parts[0]);
     }
 }
