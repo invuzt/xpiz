@@ -8,21 +8,19 @@ import android.widget.*;
 import static com.invuzt.xpiz.BrikStyle.*;
 
 public class MainActivity extends Activity {
-    // Memuat library native Rust
     static { System.loadLibrary("hello"); }
 
-    // Definisi fungsi native Rust
+    private native String getSystemConfig(String key);
     private native String getContentFromRust(int id);
     private native String handleTouch(String text);
 
     private LinearLayout contentArea;
-    private TextView bProg, bTrain;
+    private TextView bProg, bTrain, tvLevel, tvLogo;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // Membuat UI Fullscreen (No Action Bar & Status Bar overlay)
         Window w = getWindow();
         w.setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                   WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
@@ -30,31 +28,31 @@ public class MainActivity extends Activity {
         RelativeLayout root = new RelativeLayout(this);
         root.setBackgroundColor(GELAP);
 
-        // Header Area (Logo & Level)
+        // Header Area
         RelativeLayout header = new RelativeLayout(this);
         header.setId(View.generateViewId());
         header.setPadding(60, 150, 60, 40);
 
-        TextView logo = new TextView(this);
-        logo.setText("XPIZ®");
-        logo.setTextSize(28);
-        logo.setTypeface(null, Typeface.BOLD);
-        logo.setTextColor(PUTIH);
-        header.addView(logo);
+        tvLogo = new TextView(this);
+        tvLogo.setText(getSystemConfig("LOGO")); // Dari Rust
+        tvLogo.setTextSize(28);
+        tvLogo.setTypeface(null, Typeface.BOLD);
+        tvLogo.setTextColor(PUTIH);
+        header.addView(tvLogo);
 
-        TextView level = new TextView(this);
-        level.setText("71 LEVEL");
-        level.setPadding(30, 10, 30, 10);
-        level.setBackground(bulat(AKSEN, 50));
-        level.setTextColor(Color.BLACK);
-        level.setTypeface(null, Typeface.BOLD);
+        tvLevel = new TextView(this);
+        tvLevel.setText(getSystemConfig("NOTIF")); // Dari Rust
+        tvLevel.setPadding(30, 10, 30, 10);
+        tvLevel.setBackground(bulat(AKSEN, 50));
+        tvLevel.setTextColor(Color.BLACK);
+        tvLevel.setTypeface(null, Typeface.BOLD);
 
         RelativeLayout.LayoutParams lpLvl = new RelativeLayout.LayoutParams(-2, -2);
         lpLvl.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
-        header.addView(level, lpLvl);
+        header.addView(tvLevel, lpLvl);
         root.addView(header);
 
-        // Scrollable Content Area
+        // Content Area
         ScrollView scroll = new ScrollView(this);
         contentArea = new LinearLayout(this);
         contentArea.setOrientation(LinearLayout.VERTICAL);
@@ -65,7 +63,7 @@ public class MainActivity extends Activity {
         lpScroll.addRule(RelativeLayout.BELOW, header.getId());
         root.addView(scroll, lpScroll);
 
-        // Navigation Bar (Floating at Bottom)
+        // Navbar Dinamis dari Rust
         LinearLayout nav = buatNavbar();
         RelativeLayout.LayoutParams lpNav = new RelativeLayout.LayoutParams(-2, -2);
         lpNav.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
@@ -74,47 +72,39 @@ public class MainActivity extends Activity {
         root.addView(nav, lpNav);
 
         setContentView(root);
-        buka(1); // Default ke halaman Training
+        buka(1);
     }
 
     private LinearLayout buatNavbar() {
         LinearLayout n = new LinearLayout(this);
         n.setBackground(bulat(Color.BLACK, 150));
-        n.setPadding(15, 15, 15, 15);
+        n.setPadding(20, 20, 20, 20);
 
-        bProg = new TextView(this); bProg.setText(" PROGRESS ");
-        bTrain = new TextView(this); bTrain.setText(" TRAINING ");
+        String rawNav = getSystemConfig("NAVBAR");
+        String[] menus = rawNav.split("\\|");
 
-        configBtn(bProg, 2); 
-        configBtn(bTrain, 1);
-
-        n.addView(bProg); 
-        n.addView(bTrain);
+        for (int i = 0; i < menus.length; i++) {
+            TextView btn = new TextView(this);
+            btn.setText(" " + menus[i] + " ");
+            btn.setPadding(40, 20, 40, 20);
+            btn.setTypeface(null, Typeface.BOLD);
+            btn.setTextColor(Color.GRAY);
+            final int pageId = i + 1;
+            btn.setOnClickListener(v -> buka(pageId));
+            n.addView(btn);
+        }
         return n;
-    }
-
-    private void configBtn(TextView tv, int id) {
-        tv.setPadding(50, 30, 50, 30);
-        tv.setTypeface(null, Typeface.BOLD);
-        tv.setOnClickListener(v -> buka(id));
     }
 
     void buka(int id) {
         contentArea.removeAllViews();
-        
-        // Update visual state tombol navbar
-        bProg.setBackground(id == 2 ? bulat(AKSEN, 100) : null);
-        bProg.setTextColor(id == 2 ? Color.BLACK : Color.GRAY);
-        bTrain.setBackground(id == 1 ? bulat(AKSEN, 100) : null);
-        bTrain.setTextColor(id == 1 ? Color.BLACK : Color.GRAY);
+        tvLevel.setText(getSystemConfig("NOTIF")); // Update Notif tiap pindah hal
 
-        // Ambil data dinamis dari Rust
         String dataDariRust = getContentFromRust(id);
         String[] lines = dataDariRust.split("\n");
 
         for (final String line : lines) {
             if (line.trim().isEmpty()) continue;
-
             TextView card = new TextView(this);
             card.setText(line);
             card.setBackground(card(id == 1 ? PUTIH : ABU_TUA, Color.TRANSPARENT, 0));
@@ -123,9 +113,9 @@ public class MainActivity extends Activity {
             card.setTextSize(17);
             card.setTypeface(null, Typeface.BOLD);
 
-            // Reaksi saat kartu disentuh
             card.setOnClickListener(v -> {
                 String reaksi = handleTouch(line);
+                tvLevel.setText(getSystemConfig("NOTIF")); // Sync Notif Header dari Rust
                 Toast.makeText(this, reaksi, Toast.LENGTH_SHORT).show();
             });
 
