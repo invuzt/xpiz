@@ -1,6 +1,19 @@
 use jni::JNIEnv;
 use jni::objects::{JClass, JString};
 use jni::sys::{jstring};
+use std::sync::Mutex;
+use std::collections::HashMap;
+
+// Memori Pintar AI Odfiz
+struct AiBrain {
+    word_count: HashMap<String, i32>,
+}
+
+lazy_static::lazy_static! {
+    static ref BRAIN: Mutex<AiBrain> = Mutex::new(AiBrain {
+        word_count: HashMap::new(),
+    });
+}
 
 #[no_mangle]
 pub unsafe extern "system" fn Java_com_invuzt_xpiz_MainActivity_predictBestButton(
@@ -10,22 +23,24 @@ pub unsafe extern "system" fn Java_com_invuzt_xpiz_MainActivity_predictBestButto
 ) -> jstring {
     let input: String = env.get_string(&JString::from(unsafe { jni::objects::JObject::from_raw(input_java) }))
         .expect("ERR").into();
-    let input = input.trim();
+    let input = input.trim().to_lowercase();
+    let mut brain = BRAIN.lock().unwrap();
 
-    // LOGIKA KASIR MODULAR: "add btn Nama : Harga"
-    if input.to_lowercase().starts_with("add btn") {
-        let clean_input = input[7..].trim(); // Hapus "add btn"
-        if let Some((nama, harga)) = clean_input.split_once(':') {
-            return return_string(&mut env, &format!("CREATE_BTN|{}|{}", nama.trim(), harga.trim()));
-        }
+    // AI LEARNING: Hitung seberapa sering kata ini muncul
+    let count = brain.word_count.entry(input.clone()).or_insert(0);
+    *count += 1;
+
+    // AI DECISION: Kalau kata diketik 2x, jadikan TOMBOL OTOMATIS
+    if *count == 2 {
+        return return_string(&mut env, &format!("AUTO_BTN|{}", input.to_uppercase()));
     }
 
-    // LOGIKA TRANSAKSI: Jika cuma angka (bayar)
-    if let Ok(bayar) = input.parse::<f32>() {
-        return return_string(&mut env, &format!("PAYMENT|{}", bayar));
+    // LOGIKA HARGA (Kasir Otomatis)
+    if let Ok(harga) = input.parse::<f32>() {
+        return return_string(&mut env, &format!("PAY|{}", harga));
     }
 
-    return_string(&mut env, "MODE: TERMINAL|Gunakan 'add btn Nama : Harga' untuk buat tombol.")
+    return_string(&mut env, &format!("LEARNING|Data '{}' tersimpan. Ketik sekali lagi untuk jadikan shortcut.", input))
 }
 
 fn return_string(env: &mut JNIEnv, s: &str) -> jstring {
