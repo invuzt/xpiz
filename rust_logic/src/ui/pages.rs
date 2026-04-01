@@ -1,7 +1,7 @@
 pub enum AppPath {
     Training,
     Progress,
-    Settings,
+    Settings, // Akses via Header
 }
 
 impl AppPath {
@@ -9,15 +9,16 @@ impl AppPath {
         match id {
             1 => AppPath::Training,
             2 => AppPath::Progress,
-            _ => AppPath::Settings,
+            99 => AppPath::Settings, // ID khusus untuk Settings
+            _ => AppPath::Training,
         }
     }
 
     pub fn get_content(&self) -> &'static str {
         match self {
-            AppPath::Training => "START ENGINE\nCHECK STATUS\nUPDATE CORE",
-            AppPath::Progress => "CPU: OPTIMAL\nRAM: STABLE\nOS: ANDROID 14",
-            AppPath::Settings => "THEME: DARK\nLANGUAGE: RUST\nVERSION: 2.0-MODULAR",
+            AppPath::Training => "START ENGINE|INPUT\nCHECK STATUS|LABEL\nUPDATE CORE|INPUT",
+            AppPath::Progress => "CPU: 12%|LABEL\nRAM: 1.2GB|LABEL\nBACK TO MENU|ACTION",
+            AppPath::Settings => "THEME: DARK|ACTION\nUSER: ADMIN|INPUT\nVERSION: 3.0|LABEL",
         }
     }
 }
