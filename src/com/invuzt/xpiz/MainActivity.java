@@ -28,7 +28,6 @@ public class MainActivity extends Activity {
         ScrollView scrollView = new ScrollView(this);
         rootWrap.addView(scrollView);
 
-        // Kontainer Konten yang bisa diganti-ganti (Swappable)
         mainContentArea = new LinearLayout(this);
         mainContentArea.setOrientation(LinearLayout.VERTICAL);
         mainContentArea.setPadding(50, 80, 50, 280); 
@@ -56,20 +55,28 @@ public class MainActivity extends Activity {
         
         navWrap.addView(navContent);
 
-        // LOGIKA PINDAH HALAMAN
         btnProg.setOnClickListener(v -> showProgressPage());
         btnTrain.setOnClickListener(v -> showTrainingPage());
 
-        // Layout Nav Bar di bawah
         RelativeLayout.LayoutParams lpNav = new RelativeLayout.LayoutParams(-1, -2);
         lpNav.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
         lpNav.setMargins(60, 0, 60, 60);
         rootWrap.addView(navWrap, lpNav);
 
-        // Tampilan Awal
         showProgressPage();
-
         setContentView(rootWrap);
+    }
+
+    // --- TEMPLATE CSS-LIKE COMPONENT ---
+    private TextView createBrikCard(String text, int bgColor, int textColor) {
+        TextView card = new TextView(this);
+        card.setText(text);
+        card.setTextSize(24);
+        card.setTextColor(textColor);
+        card.setPadding(60, 80, 60, 80); // Padding konsisten
+        card.setBackground(createRounded(bgColor, 90)); // Rounding 90 konsisten
+        card.setTypeface(Typeface.DEFAULT);
+        return card;
     }
 
     // --- HALAMAN 1: PROGRESS ---
@@ -77,7 +84,6 @@ public class MainActivity extends Activity {
         updateNavState(true);
         mainContentArea.removeAllViews();
         
-        // Header
         TextView logo = new TextView(this);
         logo.setText("BRIK®");
         logo.setTextSize(30);
@@ -87,31 +93,23 @@ public class MainActivity extends Activity {
 
         addSpacer(mainContentArea, 60);
         
-        // Card Welcome
-        TextView card = new TextView(this);
-        card.setText("Odfiz,\nProgress Hari Ini");
-        card.setTextSize(24);
-        card.setTextColor(Color.WHITE);
-        card.setPadding(60, 80, 60, 80);
-        card.setBackground(createRounded(CL_CARD, 90));
-        mainContentArea.addView(card);
+        // Pakai Template Card
+        mainContentArea.addView(createBrikCard("Odfiz,\nProgress Hari Ini", CL_CARD, Color.WHITE));
         
         addSpacer(mainContentArea, 20);
-        
-        // Info Status
         TextView status = new TextView(this);
-        status.setText("Engine: Online\nTarget: Ponorogo");
+        status.setText("Status: Active • Ponorogo");
         status.setTextColor(Color.GRAY);
         mainContentArea.addView(status);
     }
 
-    // --- HALAMAN 2: TRAINING (DARI RUST) ---
+    // --- HALAMAN 2: TRAINING ---
     private void showTrainingPage() {
         updateNavState(false);
         mainContentArea.removeAllViews();
 
         TextView title = new TextView(this);
-        title.setText("Training Mode");
+        title.setText("TRAINING");
         title.setTextSize(30);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         title.setTextColor(Color.BLACK);
@@ -119,26 +117,17 @@ public class MainActivity extends Activity {
 
         addSpacer(mainContentArea, 60);
 
-        // Card dari Rust
-        TextView rustCard = new TextView(this);
-        rustCard.setText(getHelloFromRust());
-        rustCard.setTextSize(22);
-        rustCard.setTextColor(Color.BLACK);
-        rustCard.setPadding(60, 100, 60, 100);
-        rustCard.setBackground(createRounded(CL_ACCENT, 90));
-        rustCard.setGravity(Gravity.CENTER);
-        mainContentArea.addView(rustCard);
+        // Pakai Template Card yang SAMA, cuma beda isi & warna
+        // Kita panggil data dari Rust di sini
+        mainContentArea.addView(createBrikCard("Rust Engine:\n" + getHelloFromRust(), CL_CARD, Color.WHITE));
         
-        addSpacer(mainContentArea, 30);
-        
-        TextView hint = new TextView(this);
-        hint.setText("Tekan PROGRESS untuk kembali.");
-        hint.setTextColor(Color.GRAY);
-        hint.setGravity(Gravity.CENTER);
-        mainContentArea.addView(hint);
+        addSpacer(mainContentArea, 20);
+        TextView status = new TextView(this);
+        status.setText("Mode: Training • Low Latency");
+        status.setTextColor(Color.GRAY);
+        mainContentArea.addView(status);
     }
 
-    // Update warna tombol navigasi
     private void updateNavState(boolean isProgress) {
         if (isProgress) {
             btnProg.setBackground(createRounded(CL_ACCENT, 80));
