@@ -1,21 +1,20 @@
-pub enum AppPath {
-    Dynamic(String), // Konten ditentukan oleh input AI
-}
+pub struct AppPath;
 
 impl AppPath {
     pub fn get_ai_menu(input: &str) -> String {
-        let input_lc = input.to_lowercase();
+        let cmd = input.to_lowercase();
         
-        // Logika "Otak" AI Sederhana
-        if input_lc.contains("engine") || input_lc.contains("mesin") {
-            "START ENGINE|ACTION\nSTOP ENGINE|ACTION\nBACK|GOTO:1".to_string()
-        } else if input_lc.contains("zamera") || input_lc.contains("foto") {
-            "OPEN CAMERA|ACTION\nFLASH MODE|ACTION\nBACK|GOTO:1".to_string()
-        } else if input_lc.contains("status") {
-            "CPU OPTIMAL|LABEL\nRAM STABLE|LABEL\nBACK|GOTO:1".to_string()
+        if cmd.contains("mesin") || cmd.contains("engine") || cmd.contains("cek") {
+            "START ENGINE|ACTION\nSTOP ENGINE|ACTION\nSYSTEM SCAN|ACTION".to_string()
+        } else if cmd.contains("gelap") || cmd.contains("tema") || cmd.contains("dark") {
+            "THEME: DARK|LABEL\nTOGGLE LIGHT|ACTION\nOLED MODE|ACTION".to_string()
+        } else if cmd.contains("zamera") || cmd.contains("foto") || cmd.contains("cam") {
+            "CAPTURE|ACTION\nAI ENHANCE|ACTION\nSAVE PATH|INPUT".to_string()
+        } else if cmd.contains("metrik") || cmd.contains("status") || cmd.contains("ram") {
+            "CPU: 15%|LABEL\nRAM: 2GB|LABEL\nUPTIME: 12H|LABEL".to_string()
         } else {
-            // Default Menu jika AI tidak mengenali perintah
-            "TRAINING CORE\nSYSTEM CHECK\nAI SYNC".to_string()
+            // Default Menu jika input kosong atau tidak dikenal
+            "SCAN SYSTEM|ACTION\nCONNECT AI|ACTION\nSHOW STATUS|ACTION".to_string()
         }
     }
 }

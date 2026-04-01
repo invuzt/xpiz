@@ -23,11 +23,10 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getWindow().setFlags(512, 512);
-
         RelativeLayout root = new RelativeLayout(this);
         root.setBackgroundColor(Color.parseColor(getSystemConfig("COLOR_GELAP")));
 
-        // 1. Header
+        // Header
         RelativeLayout header = new RelativeLayout(this);
         header.setId(View.generateViewId());
         header.setPadding(60, 150, 60, 40);
@@ -36,7 +35,6 @@ public class MainActivity extends Activity {
         tvLogo.setTextSize(28);
         tvLogo.setTypeface(null, Typeface.BOLD);
         tvLogo.setTextColor(Color.WHITE);
-        tvLogo.setOnClickListener(v -> { if(handleTouch("HEADER_CLICK","").contains("GOTO:")) buka(99); });
         header.addView(tvLogo);
 
         tvLevel = new TextView(this);
@@ -44,39 +42,36 @@ public class MainActivity extends Activity {
         tvLevel.setPadding(35, 12, 35, 12);
         tvLevel.setBackground(bulat(Color.parseColor("#D0C9FF"), 50));
         tvLevel.setTextColor(Color.BLACK);
-        tvLevel.setOnClickListener(v -> { handleTouch("NOTIF_CLICK",""); buka(1); });
         RelativeLayout.LayoutParams lpL = new RelativeLayout.LayoutParams(-2,-2);
         lpL.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
         header.addView(tvLevel, lpL);
         root.addView(header);
 
-        // 2. Global Input (Hanya 1 Entry)
+        // Input Box
         globalInput = new EditText(this);
         globalInput.setId(View.generateViewId());
-        globalInput.setHint("Type command...");
+        globalInput.setHint("Ask AI (try: 'cek ram' or 'tema oled')...");
         globalInput.setHintTextColor(Color.GRAY);
         globalInput.setTextColor(Color.CYAN);
-        globalInput.setSingleLine(true); // CEGAH ENTER TURUN KE BAWAH
-        globalInput.setImeOptions(EditorInfo.IME_ACTION_SEND); // GANTI ENTER JADI SEND
+        globalInput.setSingleLine(true);
+        globalInput.setImeOptions(EditorInfo.IME_ACTION_SEND);
         globalInput.setBackground(card(Color.parseColor("#1A1A1A"), 0, 0));
         globalInput.setPadding(50, 40, 50, 40);
-        
         globalInput.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_SEND) {
-                String res = handleTouch("SEND_INPUT", globalInput.getText().toString());
-                globalInput.setText(""); // Bersihkan input
-                if(res.equals("REFRESH")) buka(1);
+                handleTouch("SEND_INPUT", globalInput.getText().toString());
+                globalInput.setText("");
+                buka(1); // Refresh ke Home
                 return true;
             }
             return false;
         });
-
         RelativeLayout.LayoutParams lpI = new RelativeLayout.LayoutParams(-1, -2);
         lpI.addRule(RelativeLayout.BELOW, header.getId());
         lpI.setMargins(40, 20, 40, 20);
         root.addView(globalInput, lpI);
 
-        // 3. Content Scroll
+        // Content
         ScrollView scroll = new ScrollView(this);
         contentArea = new LinearLayout(this);
         contentArea.setOrientation(1);
@@ -86,7 +81,7 @@ public class MainActivity extends Activity {
         lpS.addRule(RelativeLayout.BELOW, globalInput.getId());
         root.addView(scroll, lpS);
 
-        // 4. Navbar (Kembali Hadir)
+        // Navbar
         HorizontalScrollView ns = new HorizontalScrollView(this);
         ns.setBackground(bulat(Color.BLACK, 150));
         navContainer = new LinearLayout(this);
@@ -102,17 +97,24 @@ public class MainActivity extends Activity {
         buka(1);
     }
 
-    void refreshNavbar() {
+    void refreshNavbar(int activeId) {
         navContainer.removeAllViews();
         String[] menus = getSystemConfig("NAVBAR").split("\\|");
         for(int i=0; i<menus.length; i++) {
             final int pid = i+1;
+            String[] stl = getStyleConfig(pid).split("\\|");
             TextView b = new TextView(this);
             b.setText(" "+menus[i]+" ");
             b.setPadding(45, 25, 45, 25);
-            b.setTextColor(Color.WHITE);
-            b.setOnClickListener(v -> buka(pid));
-            navContainer.addView(b);
+            b.setBackground(bulat(Color.parseColor(stl[0]), 100));
+            b.setTextColor(Color.parseColor(stl[1]));
+            b.setOnClickListener(v -> {
+                handleTouch("NAV_CLICK", String.valueOf(pid));
+                buka(pid);
+            });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2,-2);
+            lp.setMargins(10,0,10,0);
+            navContainer.addView(b, lp);
         }
     }
 
@@ -120,7 +122,7 @@ public class MainActivity extends Activity {
         contentArea.removeAllViews();
         String data = getContentFromRust(id);
         tvLevel.setText(getSystemConfig("NOTIF"));
-        refreshNavbar();
+        refreshNavbar(id);
 
         for (String line : data.split("\n")) {
             String labelTxt = line.split("\\|")[0];
@@ -130,8 +132,8 @@ public class MainActivity extends Activity {
             card.setPadding(60, 60, 60, 60);
             card.setTextColor(Color.WHITE);
             card.setOnClickListener(v -> {
-                String res = handleTouch(labelTxt, "");
-                if(res.startsWith("GOTO:")) buka(Integer.parseInt(res.split(":")[1]));
+                handleTouch(labelTxt, "");
+                tvLevel.setText(getSystemConfig("NOTIF"));
             });
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
             lp.setMargins(0, 0, 0, 25);

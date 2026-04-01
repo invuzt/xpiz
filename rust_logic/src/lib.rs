@@ -3,9 +3,11 @@ use jni::objects::{JClass, JString};
 use jni::sys::{jint, jstring};
 use jni::JNIEnv;
 use crate::ui::pages::AppPath;
+use crate::ui::styles;
 
-static mut NOTIF: &str = "AI AWAKE";
+static mut NOTIF: &str = "XPIZ READY";
 static mut LAST_INPUT: String = String::new();
+static mut CURRENT_NAV_ID: i32 = 1;
 
 #[no_mangle]
 pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getSystemConfig(mut env: JNIEnv, _class: JClass, key: jstring) -> jstring {
@@ -13,18 +15,32 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getSystemConfig(mut env: JNI
     let res = match k.as_str() {
         "LOGO" => "XPIZ-AI",
         "NOTIF" => unsafe { NOTIF },
-        "NAVBAR" => "AI-HOME|METRICS",
-        "COLOR_GELAP" => "#081512",
+        "NAVBAR" => "DASHBOARD|ANALYTICS|TOOLS",
+        "COLOR_GELAP" => styles::GELAP,
         _ => "",
     };
     env.new_string(res).unwrap().into_raw()
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getContentFromRust(env: JNIEnv, _class: JClass, _id: jint) -> jstring {
-    // Isi konten sekarang diambil dari hasil analisa AI terhadap input terakhir
-    let ai_content = unsafe { AppPath::get_ai_menu(&LAST_INPUT) };
-    env.new_string(ai_content).unwrap().into_raw()
+pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getStyleConfig(env: JNIEnv, _class: JClass, id: jint) -> jstring {
+    let is_active = unsafe { id == CURRENT_NAV_ID };
+    env.new_string(styles::get_nav_style(is_active)).unwrap().into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getContentFromRust(env: JNIEnv, _class: JClass, id: jint) -> jstring {
+    unsafe { CURRENT_NAV_ID = id; }
+    let input = unsafe { &LAST_INPUT };
+    
+    // Jika di Nav 2 (Analytics), tampilkan metrik tanpa peduli input
+    let content = if id == 2 {
+        AppPath::get_ai_menu("metrik")
+    } else {
+        AppPath::get_ai_menu(input)
+    };
+    
+    env.new_string(content).unwrap().into_raw()
 }
 
 #[no_mangle]
@@ -36,11 +52,16 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_handleTouch(mut env: JNIEnv,
         "SEND_INPUT" => {
             unsafe { 
                 LAST_INPUT = v.clone();
-                NOTIF = "AI PROCESSING..."; 
+                NOTIF = "AI SYNCED"; // Update status setelah proses
             }
-            "REFRESH".to_string()
         },
-        _ => "NONE".to_string(),
+        "NAV_CLICK" => {
+            unsafe { 
+                CURRENT_NAV_ID = v.parse().unwrap_or(1);
+                NOTIF = "NAVIGATED";
+            }
+        },
+        _ => { unsafe { NOTIF = "ACTION OK"; } }
     };
     
     env.new_string("REFRESH").unwrap().into_raw()
