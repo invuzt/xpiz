@@ -17,60 +17,58 @@ public class MainActivity extends Activity {
     private native String handleTouch(String tag, String val);
 
     private LinearLayout contentArea, navContainer;
-    private TextView tvLevel, tvLogo;
+    private TextView tvLevel;
     private EditText globalInput;
+    private int currentTab = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // PASTIKAN FOLDER INTERNAL TERSEDIA UNTUK RUST
         File filesDir = getFilesDir();
-        if (!filesDir.exists()) {
-            filesDir.mkdirs();
-        }
+        if (!filesDir.exists()) filesDir.mkdirs();
 
         getWindow().setFlags(512, 512);
         RelativeLayout root = new RelativeLayout(this);
         root.setBackgroundColor(Color.parseColor(getSystemConfig("COLOR_GELAP")));
 
-        // 1. Header
+        // Header
         RelativeLayout header = new RelativeLayout(this);
         header.setId(View.generateViewId());
         header.setPadding(60, 150, 60, 40);
-        tvLogo = new TextView(this);
+        
+        TextView tvLogo = new TextView(this);
         tvLogo.setText(getSystemConfig("LOGO"));
-        tvLogo.setTextSize(28);
+        tvLogo.setTextSize(25);
         tvLogo.setTypeface(null, Typeface.BOLD);
         tvLogo.setTextColor(Color.WHITE);
         header.addView(tvLogo);
 
         tvLevel = new TextView(this);
-        tvLevel.setText(getSystemConfig("NOTIF"));
-        tvLevel.setPadding(35, 12, 35, 12);
+        tvLevel.setPadding(30, 10, 30, 10);
         tvLevel.setBackground(bulat(Color.parseColor("#D0C9FF"), 50));
         tvLevel.setTextColor(Color.BLACK);
-        tvLevel.setTypeface(null, Typeface.BOLD);
+        tvLevel.setTextSize(12);
         RelativeLayout.LayoutParams lpL = new RelativeLayout.LayoutParams(-2,-2);
         lpL.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
         header.addView(tvLevel, lpL);
         root.addView(header);
 
-        // 2. Global Input
+        // Input Box
         globalInput = new EditText(this);
         globalInput.setId(View.generateViewId());
-        globalInput.setHint("Train AI...");
+        globalInput.setHint("Ketik perintah...");
         globalInput.setHintTextColor(Color.GRAY);
         globalInput.setTextColor(Color.CYAN);
         globalInput.setSingleLine(true);
         globalInput.setImeOptions(EditorInfo.IME_ACTION_SEND);
-        globalInput.setBackground(card(Color.parseColor("#1A1A1A"), 0, 0));
+        globalInput.setBackground(card(Color.parseColor("#121212"), 0, 0));
         globalInput.setPadding(50, 40, 50, 40);
         globalInput.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_SEND) {
                 handleTouch("SEND_INPUT", globalInput.getText().toString());
                 globalInput.setText("");
-                buka(1);
+                buka(1); // Paksa refresh ke tab 1
                 return true;
             }
             return false;
@@ -80,7 +78,7 @@ public class MainActivity extends Activity {
         lpI.setMargins(40, 20, 40, 20);
         root.addView(globalInput, lpI);
 
-        // 3. Content Scroll
+        // Content Area
         ScrollView scroll = new ScrollView(this);
         contentArea = new LinearLayout(this);
         contentArea.setOrientation(1);
@@ -90,7 +88,7 @@ public class MainActivity extends Activity {
         lpS.addRule(RelativeLayout.BELOW, globalInput.getId());
         root.addView(scroll, lpS);
 
-        // 4. Navbar
+        // Navbar
         HorizontalScrollView ns = new HorizontalScrollView(this);
         ns.setBackground(bulat(Color.BLACK, 150));
         navContainer = new LinearLayout(this);
@@ -106,45 +104,59 @@ public class MainActivity extends Activity {
         buka(1);
     }
 
-    void refreshNavbar(int activeId) {
+    void refreshNavbar() {
         navContainer.removeAllViews();
         String[] menus = getSystemConfig("NAVBAR").split("\\|");
         for(int i=0; i<menus.length; i++) {
             final int pid = i+1;
             String[] stl = getStyleConfig(pid).split("\\|");
             TextView b = new TextView(this);
-            b.setText(" "+menus[i]+" ");
-            b.setPadding(45, 25, 45, 25);
+            b.setText(menus[i]);
+            b.setPadding(50, 25, 50, 25);
             b.setBackground(bulat(Color.parseColor(stl[0]), 100));
             b.setTextColor(Color.parseColor(stl[1]));
-            b.setOnClickListener(v -> buka(pid));
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
-            lp.setMargins(10, 0, 10, 0);
+            b.setOnClickListener(v -> {
+                currentTab = pid;
+                buka(pid);
+            });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2,-2);
+            lp.setMargins(10,0,10,0);
             navContainer.addView(b, lp);
         }
     }
 
     void buka(int id) {
+        currentTab = id;
         contentArea.removeAllViews();
         String data = getContentFromRust(id);
         tvLevel.setText(getSystemConfig("NOTIF"));
-        refreshNavbar(id);
+        refreshNavbar();
 
         for (String line : data.split("\n")) {
-            String labelTxt = line.split("\\|")[0];
-            TextView card = new TextView(this);
-            card.setText(labelTxt);
-            card.setBackground(card(Color.parseColor("#1A1A1A"), 0, 0));
-            card.setPadding(60, 60, 60, 60);
-            card.setTextColor(Color.WHITE);
-            card.setTypeface(null, Typeface.BOLD);
-            card.setOnClickListener(v -> {
-                handleTouch(labelTxt, "");
-                buka(id); // Refresh state
-            });
+            if (line.isEmpty()) continue;
+            String[] p = line.split("\\|");
+            String labelTxt = p[0];
+            String type = p.length > 1 ? p[1] : "LABEL";
+
+            TextView item = new TextView(this);
+            item.setText(labelTxt);
+            item.setPadding(60, 50, 60, 50);
+            item.setTextColor(Color.WHITE);
+            
+            if (type.equals("ACTION")) {
+                item.setBackground(card(Color.parseColor("#1A1A1A"), 20, 0));
+                item.setOnClickListener(v -> {
+                    handleTouch(labelTxt, ""); 
+                    buka(currentTab); // REFRESH SETELAH KLIK
+                });
+            } else {
+                item.setBackground(null);
+                item.setTextColor(Color.GRAY);
+            }
+
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-            lp.setMargins(0, 0, 0, 25);
-            contentArea.addView(card, lp);
+            lp.setMargins(0, 0, 0, 20);
+            contentArea.addView(item, lp);
         }
     }
 }
