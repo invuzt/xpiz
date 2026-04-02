@@ -2,7 +2,8 @@ mod ui;
 use jni::objects::{JClass, JString};
 use jni::sys::{jint, jstring};
 use jni::JNIEnv;
-use crate::ui::pages::AppPath;
+// Hapus import AppPath jika tidak dipakai di bawah, 
+// atau biarkan jika digunakan untuk navigasi
 use xpiz_brain::XpizBrain as Brain;
 use std::fs;
 
@@ -65,7 +66,6 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getContentFromRust(env: JNIE
         let input = unsafe { &LAST_INPUT };
         let prediction = brain.predict(input);
         
-        // Logika menu berdasarkan hasil prediksi xpiz_brain
         let menu = match prediction.as_str() {
             "engine" => "ENGINE: ACTIVE|LABEL\nDIAGNOSTIC|ACTION\nSTOP ENGINE|ACTION",
             "camera" => "OPEN ZAMERA|ACTION\nAI FILTERS|ACTION\nSTORAGE: OK|LABEL",
@@ -84,10 +84,8 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_handleTouch(mut env: JNIEnv,
     match t.as_str() {
         "SEND_INPUT" => {
             unsafe { LAST_INPUT = v.clone(); }
-            // Sederhanakan: Jika input mengandung kata kunci, suruh AI belajar label tersebut
             if v.contains("mesin") { brain.learn(&v, "engine"); }
             if v.contains("foto") || v.contains("kamera") { brain.learn(&v, "camera"); }
-            
             save_brain();
             unsafe { NOTIF = "LEARNED"; }
         },
