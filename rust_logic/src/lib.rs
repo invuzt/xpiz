@@ -64,12 +64,11 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getContentFromRust(env: JNIE
         let input = unsafe { &LAST_INPUT };
         let prediction = brain.predict(input);
         
-        // Default menu jika belum ada input atau prediksi "unknown"
         let mut menu = "AI READY|LABEL\nSCAN SYSTEM|ACTION\nCONNECT AI|ACTION".to_string();
 
-        // Overwrite menu jika AI mengenali sesuatu
         if prediction == "engine" {
-            menu = "ENGINE: ACTIVE|LABEL\nDIAGNOSTIC|ACTION\nSTOP ENGINE|ACTION".to_string();
+            // PASTIKAN STRING INI SAMA PERSIS DENGAN YANG DI MATCH handleTouch
+            menu = "START ENGINE|ACTION\nCHECK STATUS|ACTION\nUPDATE CORE|ACTION".to_string();
         } else if prediction == "camera" {
             menu = "OPEN ZAMERA|ACTION\nAI FILTERS|ACTION\nCAPTURE MODE|ACTION".to_string();
         } else if !input.is_empty() && prediction == "unknown" {
@@ -89,11 +88,19 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_handleTouch(mut env: JNIEnv,
     match t.as_str() {
         "SEND_INPUT" => {
             unsafe { LAST_INPUT = v.clone(); }
-            // Auto-learn sederhana
             if v.contains("mesin") { brain.learn(&v, "engine"); }
             if v.contains("foto") || v.contains("kamera") { brain.learn(&v, "camera"); }
             save_brain();
-            unsafe { NOTIF = "LEARNED"; }
+            unsafe { NOTIF = "BRAIN UPDATED"; }
+        },
+        "START ENGINE" => {
+            unsafe { NOTIF = "ENGINE STARTED!"; }
+        },
+        "CHECK STATUS" => {
+            unsafe { NOTIF = "ALL SYSTEMS NOMINAL"; }
+        },
+        "UPDATE CORE" => {
+            unsafe { NOTIF = "CORE UPDATED TO V1.0.3"; }
         },
         "TRAIN ENGINE" => {
             let input = unsafe { &LAST_INPUT };
@@ -101,18 +108,14 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_handleTouch(mut env: JNIEnv,
             save_brain();
             unsafe { NOTIF = "MAPPED TO ENGINE"; }
         },
-        "TRAIN CAMERA" => {
-            let input = unsafe { &LAST_INPUT };
-            brain.learn(input, "camera");
-            save_brain();
-            unsafe { NOTIF = "MAPPED TO CAMERA"; }
-        },
         "RESET BRAIN" => { 
             brain.weights.clear(); 
             save_brain(); 
             unsafe { NOTIF = "WIPED"; } 
         },
-        _ => { unsafe { NOTIF = "OK"; } }
+        _ => { 
+            unsafe { NOTIF = "ACTION UNKNOWN"; } 
+        }
     };
     
     env.new_string("REFRESH").unwrap().into_raw()
