@@ -2,8 +2,6 @@ mod ui;
 use jni::objects::{JClass, JString};
 use jni::sys::{jint, jstring};
 use jni::JNIEnv;
-// Hapus import AppPath jika tidak dipakai di bawah, 
-// atau biarkan jika digunakan untuk navigasi
 use xpiz_brain::XpizBrain as Brain;
 use std::fs;
 
@@ -66,11 +64,18 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getContentFromRust(env: JNIE
         let input = unsafe { &LAST_INPUT };
         let prediction = brain.predict(input);
         
-        let menu = match prediction.as_str() {
-            "engine" => "ENGINE: ACTIVE|LABEL\nDIAGNOSTIC|ACTION\nSTOP ENGINE|ACTION",
-            "camera" => "OPEN ZAMERA|ACTION\nAI FILTERS|ACTION\nSTORAGE: OK|LABEL",
-            _ => "AI READY|LABEL\nTYPE TO TRAIN|LABEL\nSCAN SYSTEM|ACTION",
-        };
+        // Default menu jika belum ada input atau prediksi "unknown"
+        let mut menu = "AI READY|LABEL\nSCAN SYSTEM|ACTION\nCONNECT AI|ACTION".to_string();
+
+        // Overwrite menu jika AI mengenali sesuatu
+        if prediction == "engine" {
+            menu = "ENGINE: ACTIVE|LABEL\nDIAGNOSTIC|ACTION\nSTOP ENGINE|ACTION".to_string();
+        } else if prediction == "camera" {
+            menu = "OPEN ZAMERA|ACTION\nAI FILTERS|ACTION\nCAPTURE MODE|ACTION".to_string();
+        } else if !input.is_empty() && prediction == "unknown" {
+            menu = format!("AI CONFUSED: '{}'|LABEL\nTRAIN ENGINE|ACTION\nTRAIN CAMERA|ACTION", input);
+        }
+
         env.new_string(menu).unwrap().into_raw()
     }
 }
@@ -84,18 +89,30 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_handleTouch(mut env: JNIEnv,
     match t.as_str() {
         "SEND_INPUT" => {
             unsafe { LAST_INPUT = v.clone(); }
+            // Auto-learn sederhana
             if v.contains("mesin") { brain.learn(&v, "engine"); }
             if v.contains("foto") || v.contains("kamera") { brain.learn(&v, "camera"); }
             save_brain();
             unsafe { NOTIF = "LEARNED"; }
         },
-        "SAVE MEMORY" => { save_brain(); unsafe { NOTIF = "SAVED"; } },
+        "TRAIN ENGINE" => {
+            let input = unsafe { &LAST_INPUT };
+            brain.learn(input, "engine");
+            save_brain();
+            unsafe { NOTIF = "MAPPED TO ENGINE"; }
+        },
+        "TRAIN CAMERA" => {
+            let input = unsafe { &LAST_INPUT };
+            brain.learn(input, "camera");
+            save_brain();
+            unsafe { NOTIF = "MAPPED TO CAMERA"; }
+        },
         "RESET BRAIN" => { 
             brain.weights.clear(); 
             save_brain(); 
             unsafe { NOTIF = "WIPED"; } 
         },
-        _ => { unsafe { NOTIF = "ACTION OK"; } }
+        _ => { unsafe { NOTIF = "OK"; } }
     };
     
     env.new_string("REFRESH").unwrap().into_raw()
