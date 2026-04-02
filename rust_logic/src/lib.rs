@@ -5,9 +5,8 @@ use jni::JNIEnv;
 use xpiz_brain::XpizBrain as Brain;
 use std::fs;
 
-static mut NOTIF: &str = "XPIZ AI ONLINE";
+static mut NOTIF: &str = "XPIZ DYNAMIC AI";
 static mut LAST_INPUT: String = String::new();
-static mut CURRENT_NAV_ID: i32 = 1;
 static mut AI_BRAIN: Option<Brain> = None;
 const BRAIN_PATH: &str = "/data/user/0/com.invuzt.xpiz/files/brain.json";
 
@@ -36,9 +35,9 @@ fn save_brain() {
 pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getSystemConfig(mut env: JNIEnv, _class: JClass, key: jstring) -> jstring {
     let k: String = env.get_string(&unsafe { JString::from_raw(key) }).unwrap().into();
     let res = match k.as_str() {
-        "LOGO" => "XPIZ-AI",
+        "LOGO" => "XPIZ-OS",
         "NOTIF" => unsafe { NOTIF },
-        "NAVBAR" => "AI-HOME|ANALYTICS",
+        "NAVBAR" => "AI-HOME|BRAIN",
         "COLOR_GELAP" => "#081512",
         _ => "",
     };
@@ -46,81 +45,70 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getSystemConfig(mut env: JNI
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getStyleConfig(env: JNIEnv, _class: JClass, id: jint) -> jstring {
-    let is_active = unsafe { id == CURRENT_NAV_ID };
-    let stl = if is_active { "#D0C9FF|#000000" } else { "#1A1A1A|#FFFFFF" };
-    env.new_string(stl).unwrap().into_raw()
+pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getStyleConfig(env: JNIEnv, _class: JClass, _id: jint) -> jstring {
+    env.new_string("#1A1A1A|#FFFFFF").unwrap().into_raw()
 }
 
 #[no_mangle]
 pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getContentFromRust(env: JNIEnv, _class: JClass, id: jint) -> jstring {
-    unsafe { CURRENT_NAV_ID = id; }
     let brain = get_brain();
-    
     if id == 2 {
-        let content = format!("KNOWLEDGE: {} LABELS|LABEL\nSAVE MEMORY|ACTION\nRESET BRAIN|ACTION", brain.weights.len());
-        env.new_string(content).unwrap().into_raw()
-    } else {
-        let input = unsafe { &LAST_INPUT };
-        let prediction = brain.predict(input);
-        
-        let mut menu = "AI READY|LABEL\nSCAN SYSTEM|ACTION\nCONNECT AI|ACTION".to_string();
+        let content = format!("TRAINED: {} LABELS|LABEL\nRESET ALL|ACTION", brain.weights.len());
+        return env.new_string(content).unwrap().into_raw();
+    }
 
-        if prediction == "engine" {
-            // WAJIB PAKAI |ACTION AGAR MUNCUL KOTAK DAN BISA DIKLIK
-            menu = "START ENGINE|ACTION\nCHECK STATUS|ACTION\nUPDATE CORE|ACTION".to_string();
-        } else if prediction == "camera" {
-            menu = "OPEN ZAMERA|ACTION\nAI FILTERS|ACTION\nCAPTURE MODE|ACTION".to_string();
-        } else if !input.is_empty() && prediction == "unknown" {
-            menu = format!("AI CONFUSED: '{}'|LABEL\nTRAIN ENGINE|ACTION\nTRAIN CAMERA|ACTION", input);
+    let input = unsafe { &LAST_INPUT };
+    let prediction = brain.predict(input);
+    
+    if prediction == "unknown" {
+        if input.is_empty() {
+            env.new_string("XPIZ READY|LABEL\nTYPE TO START|LABEL").unwrap().into_raw()
+        } else {
+            env.new_string(format!("NEW PATTERN: '{}'|LABEL\nMAP TO ENGINE|ACTION\nMAP TO CAMERA|ACTION", input)).unwrap().into_raw()
         }
-
-        env.new_string(menu).unwrap().into_raw()
+    } else {
+        // AMBIL TOMBOL DARI MEMORI AI
+        let actions = brain.actions.get(&prediction).cloned().unwrap_or_default();
+        if actions.is_empty() {
+            env.new_string(format!("KATEGORI: {}|LABEL\nADD START|ACTION\nADD STATUS|ACTION", prediction)).unwrap().into_raw()
+        } else {
+            let mut menu = format!("PREDICTION: {}|LABEL\n", prediction.to_uppercase());
+            menu.push_str(&actions.join("\n"));
+            env.new_string(menu).unwrap().into_raw()
+        }
     }
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_handleTouch(mut env: JNIEnv, _class: JClass, tag: jstring, val: jstring) -> jstring {
+pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_handleTouch(mut env: JNIEnv, _class: JClass, tag: jstring, _val: jstring) -> jstring {
     let t: String = env.get_string(&unsafe { JString::from_raw(tag) }).unwrap().into();
-    let v: String = env.get_string(&unsafe { JString::from_raw(val) }).unwrap().into();
     let brain = get_brain();
 
     match t.as_str() {
-        "SEND_INPUT" => {
-            unsafe { LAST_INPUT = v.clone(); }
-            if v.contains("mesin") { brain.learn(&v, "engine"); }
-            if v.contains("foto") || v.contains("kamera") { brain.learn(&v, "camera"); }
-            save_brain();
-            unsafe { NOTIF = "BRAIN UPDATED"; }
-        },
-        "START ENGINE" => {
-            unsafe { NOTIF = "ENGINE STARTED!"; }
-        },
-        "CHECK STATUS" => {
-            unsafe { NOTIF = "SYSTEMS NOMINAL"; }
-        },
-        "UPDATE CORE" => {
-            unsafe { NOTIF = "CORE UPDATED"; }
-        },
-        "TRAIN ENGINE" => {
+        "SEND_INPUT" => { /* Java handles this by updating LAST_INPUT indirectly */ },
+        "MAP TO ENGINE" => {
             let input = unsafe { &LAST_INPUT };
             brain.learn(input, "engine");
             save_brain();
-            unsafe { NOTIF = "MAPPED TO ENGINE"; }
         },
-        "TRAIN CAMERA" => {
+        "MAP TO CAMERA" => {
             let input = unsafe { &LAST_INPUT };
             brain.learn(input, "camera");
             save_brain();
-            unsafe { NOTIF = "MAPPED TO CAMERA"; }
         },
-        "RESET BRAIN" => { 
-            brain.weights.clear(); 
-            save_brain(); 
-            unsafe { NOTIF = "WIPED"; } 
+        "ADD START" => {
+            brain.add_action("engine", "START ENGINE");
+            save_brain();
         },
-        _ => { unsafe { NOTIF = "UNKNOWN"; } }
+        "ADD STATUS" => {
+            brain.add_action("engine", "CHECK STATUS");
+            save_brain();
+        },
+        "RESET ALL" => {
+            *brain = Brain::default();
+            save_brain();
+        },
+        _ => { unsafe { NOTIF = "ACTION: OK"; } }
     };
-    
     env.new_string("REFRESH").unwrap().into_raw()
 }
