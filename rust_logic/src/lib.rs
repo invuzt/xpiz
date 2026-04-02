@@ -67,7 +67,7 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getContentFromRust(env: JNIE
         let mut menu = "AI READY|LABEL\nSCAN SYSTEM|ACTION\nCONNECT AI|ACTION".to_string();
 
         if prediction == "engine" {
-            // PASTIKAN STRING INI SAMA PERSIS DENGAN YANG DI MATCH handleTouch
+            // WAJIB PAKAI |ACTION AGAR MUNCUL KOTAK DAN BISA DIKLIK
             menu = "START ENGINE|ACTION\nCHECK STATUS|ACTION\nUPDATE CORE|ACTION".to_string();
         } else if prediction == "camera" {
             menu = "OPEN ZAMERA|ACTION\nAI FILTERS|ACTION\nCAPTURE MODE|ACTION".to_string();
@@ -97,10 +97,10 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_handleTouch(mut env: JNIEnv,
             unsafe { NOTIF = "ENGINE STARTED!"; }
         },
         "CHECK STATUS" => {
-            unsafe { NOTIF = "ALL SYSTEMS NOMINAL"; }
+            unsafe { NOTIF = "SYSTEMS NOMINAL"; }
         },
         "UPDATE CORE" => {
-            unsafe { NOTIF = "CORE UPDATED TO V1.0.3"; }
+            unsafe { NOTIF = "CORE UPDATED"; }
         },
         "TRAIN ENGINE" => {
             let input = unsafe { &LAST_INPUT };
@@ -108,14 +108,18 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_handleTouch(mut env: JNIEnv,
             save_brain();
             unsafe { NOTIF = "MAPPED TO ENGINE"; }
         },
+        "TRAIN CAMERA" => {
+            let input = unsafe { &LAST_INPUT };
+            brain.learn(input, "camera");
+            save_brain();
+            unsafe { NOTIF = "MAPPED TO CAMERA"; }
+        },
         "RESET BRAIN" => { 
             brain.weights.clear(); 
             save_brain(); 
             unsafe { NOTIF = "WIPED"; } 
         },
-        _ => { 
-            unsafe { NOTIF = "ACTION UNKNOWN"; } 
-        }
+        _ => { unsafe { NOTIF = "UNKNOWN"; } }
     };
     
     env.new_string("REFRESH").unwrap().into_raw()
