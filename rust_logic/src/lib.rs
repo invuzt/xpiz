@@ -4,6 +4,9 @@ use jni::sys::{jint, jstring};
 use jni::JNIEnv;
 use crate::ui::pages::{AppPath, Brain};
 use std::fs;
+# Ubah bagian atas lib.rs menjadi:
+use xpiz_brain::XpizBrain as Brain; 
+
 
 static mut LAST_INPUT: String = String::new();
 static mut NOTIF: &str = "XPIZ AI ONLINE";
