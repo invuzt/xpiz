@@ -67,10 +67,14 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_renderMarkdownNative(
     let raw: String = env.get_string(&content).expect("Err").into();
     let html = raw.lines().map(|line| {
         let mut p = line.to_string();
-        // Deteksi [[Link]]
-        if p.contains("[[") && p.contains("]]") {
-            p = p.replace("[[", "<b style='color:#62b5ff;'>").replace("]]", "</b>");
+        
+        // Zettelkasten Link Builder Logic
+        while let (Some(start), Some(end)) = (p.find("[["), p.find("]]")) {
+            let link_text = &p[start+2..end];
+            let replacement = format!("<a href='{}'>{}</a>", link_text, link_text);
+            p.replace_range(start..end+2, &replacement);
         }
+
         if p.starts_with("# ") { format!("<h1>{}</h1>", &p[2..]) }
         else if p.starts_with("## ") { format!("<h2>{}</h2>", &p[3..]) }
         else { format!("<p>{}</p>", p) }

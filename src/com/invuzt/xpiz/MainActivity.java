@@ -6,6 +6,11 @@ import android.widget.*;
 import android.view.*;
 import android.graphics.Color;
 import android.text.Html;
+import android.text.method.LinkMovementMethod;
+import android.text.style.URLSpan;
+import android.text.style.ClickableSpan;
+import android.text.Spannable;
+import android.text.SpannableStringBuilder;
 import java.io.File;
 import java.util.ArrayList;
 
@@ -18,14 +23,15 @@ public class MainActivity extends Activity {
     private native String readMarkdownNative(String path);
     private native String renderMarkdownNative(String content);
 
-    private ArrayAdapter<String> adapter;
+    private EditText etTitle, etBody;
+    private TextView tvPreview;
     private ArrayList<String> fileList;
+    private ArrayAdapter<String> adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // Root Layout (Dark Mode)
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(30, 30, 30, 30);
@@ -36,23 +42,25 @@ public class MainActivity extends Activity {
         status.setTextColor(Color.GRAY);
         root.addView(status);
 
-        final EditText etTitle = new EditText(this);
+        etTitle = new EditText(this);
         etTitle.setHint("Judul.md");
         etTitle.setTextColor(Color.WHITE);
         etTitle.setHintTextColor(Color.DKGRAY);
         root.addView(etTitle);
 
-        final EditText etBody = new EditText(this);
-        etBody.setHint("Tulis isi...");
+        etBody = new EditText(this);
+        etBody.setHint("Tulis isi catatan (gunakan [[Link]] untuk menghubungkan)...");
         etBody.setLines(8);
         etBody.setTextColor(Color.WHITE);
         etBody.setHintTextColor(Color.DKGRAY);
         etBody.setGravity(Gravity.TOP);
         root.addView(etBody);
 
-        final TextView tvPreview = new TextView(this);
+        tvPreview = new TextView(this);
         tvPreview.setTextColor(Color.WHITE);
+        tvPreview.setLinkTextColor(Color.parseColor("#62b5ff"));
         tvPreview.setVisibility(View.GONE);
+        tvPreview.setMovementMethod(LinkMovementMethod.getInstance());
         root.addView(tvPreview);
 
         LinearLayout btnRow = new LinearLayout(this);
@@ -82,18 +90,32 @@ public class MainActivity extends Activity {
         };
 
         btnSave.setOnClickListener(v -> {
-            String title = etTitle.getText().toString();
-            if(title.isEmpty()) return;
-            if(!title.endsWith(".md")) title += ".md";
-            File f = new File(getExternalFilesDir(null), title);
-            saveMarkdownNative(f.getAbsolutePath(), etBody.getText().toString());
+            String t = etTitle.getText().toString();
+            if(t.isEmpty()) return;
+            if(!t.endsWith(".md")) t += ".md";
+            saveMarkdownNative(new File(getExternalFilesDir(null), t).getAbsolutePath(), etBody.getText().toString());
             refresh.run();
             Toast.makeText(this, "Tersimpan!", Toast.LENGTH_SHORT).show();
         });
 
         btnToggle.setOnClickListener(v -> {
             if(tvPreview.getVisibility() == View.GONE) {
-                tvPreview.setText(Html.fromHtml(renderMarkdownNative(etBody.getText().toString())));
+                String html = renderMarkdownNative(etBody.getText().toString());
+                SpannableStringBuilder ssb = new SpannableStringBuilder(Html.fromHtml(html));
+                URLSpan[] spans = ssb.getSpans(0, ssb.length(), URLSpan.class);
+                for (URLSpan span : spans) {
+                    int start = ssb.getSpanStart(span);
+                    int end = ssb.getSpanEnd(span);
+                    String target = span.getURL();
+                    ssb.setSpan(new ClickableSpan() {
+                        @Override
+                        public void onClick(View widget) {
+                            openFile(target);
+                        }
+                    }, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    ssb.removeSpan(span);
+                }
+                tvPreview.setText(ssb);
                 tvPreview.setVisibility(View.VISIBLE);
                 etBody.setVisibility(View.GONE);
             } else {
@@ -102,16 +124,23 @@ public class MainActivity extends Activity {
             }
         });
 
-        lv.setOnItemClickListener((p, v, pos, id) -> {
-            String name = fileList.get(pos);
-            String content = readMarkdownNative(new File(getExternalFilesDir(null), name).getAbsolutePath());
-            etTitle.setText(name);
-            etBody.setText(content);
-            tvPreview.setVisibility(View.GONE);
-            etBody.setVisibility(View.VISIBLE);
-        });
+        lv.setOnItemClickListener((p, v, pos, id) -> openFile(fileList.get(pos)));
 
         refresh.run();
         setContentView(root);
+    }
+
+    private void openFile(String name) {
+        if(!name.endsWith(".md")) name += ".md";
+        File f = new File(getExternalFilesDir(null), name);
+        etTitle.setText(name);
+        if(f.exists()) {
+            etBody.setText(readMarkdownNative(f.getAbsolutePath()));
+        } else {
+            etBody.setText("");
+            Toast.makeText(this, "Catatan baru dibuat", Toast.LENGTH_SHORT).show();
+        }
+        tvPreview.setVisibility(View.GONE);
+        etBody.setVisibility(View.VISIBLE);
     }
 }
