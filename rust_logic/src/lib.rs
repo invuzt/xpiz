@@ -67,17 +67,39 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_renderMarkdownNative(
     let raw: String = env.get_string(&content).expect("Err").into();
     let html = raw.lines().map(|line| {
         let mut p = line.to_string();
-        
-        // Zettelkasten Link Builder Logic
         while let (Some(start), Some(end)) = (p.find("[["), p.find("]]")) {
             let link_text = &p[start+2..end];
             let replacement = format!("<a href='{}'>{}</a>", link_text, link_text);
             p.replace_range(start..end+2, &replacement);
         }
-
         if p.starts_with("# ") { format!("<h1>{}</h1>", &p[2..]) }
         else if p.starts_with("## ") { format!("<h2>{}</h2>", &p[3..]) }
         else { format!("<p>{}</p>", p) }
     }).collect::<Vec<String>>().join("");
     env.new_string(html).unwrap().into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getGraphDataNative(
+    mut env: JNIEnv,
+    _class: JClass,
+    dir_path: JString,
+) -> jstring {
+    let path: String = env.get_string(&dir_path).expect("Err").into();
+    let mut relations = Vec::new();
+    if let Ok(entries) = fs::read_dir(path) {
+        for entry in entries.filter_map(|e| e.ok()) {
+            let file_name = entry.file_name().to_string_lossy().replace(".md", "");
+            if let Ok(content) = fs::read_to_string(entry.path()) {
+                for cap in content.split("[[").skip(1) {
+                    if let Some(end) = cap.find("]]") {
+                        let link = &cap[..end];
+                        relations.push(format!("{}:{}", file_name, link));
+                    }
+                }
+            }
+        }
+    }
+    let res = if relations.is_empty() { "Kosong".to_string() } else { relations.join("|") };
+    env.new_string(res).unwrap().into_raw()
 }

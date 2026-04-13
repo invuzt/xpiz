@@ -1,18 +1,17 @@
 package com.invuzt.xpiz;
 
 import android.app.Activity;
+import android.app.Dialog;
 import android.os.Bundle;
 import android.widget.*;
 import android.view.*;
-import android.graphics.Color;
-import android.text.Html;
+import android.graphics.*;
+import android.text.*;
 import android.text.method.LinkMovementMethod;
-import android.text.style.URLSpan;
 import android.text.style.ClickableSpan;
-import android.text.Spannable;
-import android.text.SpannableStringBuilder;
+import android.text.style.URLSpan;
 import java.io.File;
-import java.util.ArrayList;
+import java.util.*;
 
 public class MainActivity extends Activity {
     static { try { System.loadLibrary("hello"); } catch (UnsatisfiedLinkError e) {} }
@@ -22,6 +21,7 @@ public class MainActivity extends Activity {
     private native String listVaultFiles(String dirPath);
     private native String readMarkdownNative(String path);
     private native String renderMarkdownNative(String content);
+    private native String getGraphDataNative(String dirPath);
 
     private EditText etTitle, etBody;
     private TextView tvPreview;
@@ -45,29 +45,28 @@ public class MainActivity extends Activity {
         etTitle = new EditText(this);
         etTitle.setHint("Judul.md");
         etTitle.setTextColor(Color.WHITE);
-        etTitle.setHintTextColor(Color.DKGRAY);
         root.addView(etTitle);
 
         etBody = new EditText(this);
-        etBody.setHint("Tulis isi catatan (gunakan [[Link]] untuk menghubungkan)...");
-        etBody.setLines(8);
+        etBody.setHint("Isi catatan...");
+        etBody.setLines(6);
         etBody.setTextColor(Color.WHITE);
-        etBody.setHintTextColor(Color.DKGRAY);
         etBody.setGravity(Gravity.TOP);
         root.addView(etBody);
 
         tvPreview = new TextView(this);
         tvPreview.setTextColor(Color.WHITE);
-        tvPreview.setLinkTextColor(Color.parseColor("#62b5ff"));
+        tvPreview.setLinkTextColor(Color.CYAN);
         tvPreview.setVisibility(View.GONE);
         tvPreview.setMovementMethod(LinkMovementMethod.getInstance());
         root.addView(tvPreview);
 
-        LinearLayout btnRow = new LinearLayout(this);
+        LinearLayout row = new LinearLayout(this);
         Button btnSave = new Button(this); btnSave.setText("SIMPAN");
         Button btnToggle = new Button(this); btnToggle.setText("PREVIEW");
-        btnRow.addView(btnSave); btnRow.addView(btnToggle);
-        root.addView(btnRow);
+        Button btnGraph = new Button(this); btnGraph.setText("GRAPH");
+        row.addView(btnSave); row.addView(btnToggle); row.addView(btnGraph);
+        root.addView(row);
 
         fileList = new ArrayList<>();
         adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, fileList) {
@@ -108,22 +107,18 @@ public class MainActivity extends Activity {
                     int end = ssb.getSpanEnd(span);
                     String target = span.getURL();
                     ssb.setSpan(new ClickableSpan() {
-                        @Override
-                        public void onClick(View widget) {
-                            openFile(target);
-                        }
+                        @Override public void onClick(View w) { openFile(target); }
                     }, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
                     ssb.removeSpan(span);
                 }
                 tvPreview.setText(ssb);
-                tvPreview.setVisibility(View.VISIBLE);
-                etBody.setVisibility(View.GONE);
+                tvPreview.setVisibility(View.VISIBLE); etBody.setVisibility(View.GONE);
             } else {
-                tvPreview.setVisibility(View.GONE);
-                etBody.setVisibility(View.VISIBLE);
+                tvPreview.setVisibility(View.GONE); etBody.setVisibility(View.VISIBLE);
             }
         });
 
+        btnGraph.setOnClickListener(v -> showGraph());
         lv.setOnItemClickListener((p, v, pos, id) -> openFile(fileList.get(pos)));
 
         refresh.run();
@@ -134,13 +129,35 @@ public class MainActivity extends Activity {
         if(!name.endsWith(".md")) name += ".md";
         File f = new File(getExternalFilesDir(null), name);
         etTitle.setText(name);
-        if(f.exists()) {
-            etBody.setText(readMarkdownNative(f.getAbsolutePath()));
-        } else {
-            etBody.setText("");
-            Toast.makeText(this, "Catatan baru dibuat", Toast.LENGTH_SHORT).show();
-        }
+        if(f.exists()) etBody.setText(readMarkdownNative(f.getAbsolutePath()));
+        else etBody.setText("");
         tvPreview.setVisibility(View.GONE);
         etBody.setVisibility(View.VISIBLE);
+    }
+
+    private void showGraph() {
+        String data = getGraphDataNative(getExternalFilesDir(null).getAbsolutePath());
+        Dialog d = new Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        View gv = new View(this) {
+            @Override protected void onDraw(Canvas c) {
+                if(data.equals("Kosong")) return;
+                Paint p = new Paint(); p.setColor(Color.CYAN); p.setStrokeWidth(3);
+                Paint tp = new Paint(); tp.setColor(Color.WHITE); tp.setTextSize(25);
+                Map<String, Point> nodes = new HashMap<>();
+                Random r = new Random();
+                String[] pairs = data.split("\\|");
+                for(String pair : pairs) {
+                    String[] parts = pair.split(":");
+                    if(parts.length < 2) continue;
+                    for(String n : parts) if(!nodes.containsKey(n)) nodes.put(n, new Point(r.nextInt(getWidth()-200)+100, r.nextInt(getHeight()-200)+100));
+                    Point p1 = nodes.get(parts[0]), p2 = nodes.get(parts[1]);
+                    c.drawLine(p1.x, p1.y, p2.x, p2.y, p);
+                }
+                for(String n : nodes.keySet()) { Point pt = nodes.get(n); c.drawCircle(pt.x, pt.y, 10, p); c.drawText(n, pt.x+15, pt.y, tp); }
+            }
+        };
+        gv.setBackgroundColor(Color.BLACK);
+        d.setContentView(gv);
+        d.show();
     }
 }
