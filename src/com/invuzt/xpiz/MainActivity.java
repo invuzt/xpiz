@@ -137,27 +137,52 @@ public class MainActivity extends Activity {
 
     private void showGraph() {
         String data = getGraphDataNative(getExternalFilesDir(null).getAbsolutePath());
-        Dialog d = new Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        final Dialog d = new Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        FrameLayout layout = new FrameLayout(this);
+        
         View gv = new View(this) {
             @Override protected void onDraw(Canvas c) {
                 if(data.equals("Kosong")) return;
-                Paint p = new Paint(); p.setColor(Color.CYAN); p.setStrokeWidth(3);
-                Paint tp = new Paint(); tp.setColor(Color.WHITE); tp.setTextSize(25);
+                Paint p = new Paint(); p.setColor(Color.CYAN); p.setStrokeWidth(4); p.setAntiAlias(true);
+                Paint tp = new Paint(); tp.setColor(Color.WHITE); tp.setTextSize(30);
                 Map<String, Point> nodes = new HashMap<>();
                 Random r = new Random();
                 String[] pairs = data.split("\\|");
                 for(String pair : pairs) {
                     String[] parts = pair.split(":");
                     if(parts.length < 2) continue;
-                    for(String n : parts) if(!nodes.containsKey(n)) nodes.put(n, new Point(r.nextInt(getWidth()-200)+100, r.nextInt(getHeight()-200)+100));
+                    for(String n : parts) {
+                        if(!nodes.containsKey(n)) {
+                            int x = r.nextInt(Math.max(1, getWidth() - 300)) + 150;
+                            int y = r.nextInt(Math.max(1, getHeight() - 300)) + 150;
+                            nodes.put(n, new Point(x, y));
+                        }
+                    }
                     Point p1 = nodes.get(parts[0]), p2 = nodes.get(parts[1]);
-                    c.drawLine(p1.x, p1.y, p2.x, p2.y, p);
+                    if(p1 != null && p2 != null) c.drawLine(p1.x, p1.y, p2.x, p2.y, p);
                 }
-                for(String n : nodes.keySet()) { Point pt = nodes.get(n); c.drawCircle(pt.x, pt.y, 10, p); c.drawText(n, pt.x+15, pt.y, tp); }
+                for(String n : nodes.keySet()) { 
+                    Point pt = nodes.get(n); 
+                    c.drawCircle(pt.x, pt.y, 12, p); 
+                    c.drawText(n, pt.x+20, pt.y+10, tp); 
+                }
             }
         };
-        gv.setBackgroundColor(Color.BLACK);
-        d.setContentView(gv);
+
+        gv.setBackgroundColor(Color.parseColor("#121212"));
+        layout.addView(gv);
+
+        Button btnClose = new Button(this);
+        btnClose.setText("X"); btnClose.setTextColor(Color.WHITE);
+        btnClose.setBackgroundColor(Color.TRANSPARENT);
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(150, 150);
+        params.gravity = Gravity.TOP | Gravity.RIGHT;
+        btnClose.setLayoutParams(params);
+        btnClose.setOnClickListener(v -> d.dismiss());
+        layout.addView(btnClose);
+
+        d.setContentView(layout);
+        d.setCancelable(true);
         d.show();
     }
 }
