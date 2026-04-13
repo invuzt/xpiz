@@ -66,9 +66,14 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_renderMarkdownNative(
 ) -> jstring {
     let raw: String = env.get_string(&content).expect("Err").into();
     let html = raw.lines().map(|line| {
-        if line.starts_with("# ") { format!("<h1>{}</h1>", &line[2..]) }
-        else if line.starts_with("## ") { format!("<h2>{}</h2>", &line[3..]) }
-        else { format!("<p>{}</p>", line) }
+        let mut p = line.to_string();
+        // Deteksi [[Link]]
+        if p.contains("[[") && p.contains("]]") {
+            p = p.replace("[[", "<b style='color:#62b5ff;'>").replace("]]", "</b>");
+        }
+        if p.starts_with("# ") { format!("<h1>{}</h1>", &p[2..]) }
+        else if p.starts_with("## ") { format!("<h2>{}</h2>", &p[3..]) }
+        else { format!("<p>{}</p>", p) }
     }).collect::<Vec<String>>().join("");
     env.new_string(html).unwrap().into_raw()
 }

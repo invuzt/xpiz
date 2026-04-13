@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.widget.*;
 import android.view.*;
+import android.graphics.Color;
 import android.text.Html;
 import java.io.File;
 import java.util.ArrayList;
@@ -24,25 +25,33 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
+        // Root Layout (Dark Mode)
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(30, 30, 30, 30);
+        root.setBackgroundColor(Color.parseColor("#1e1e1e"));
 
         TextView status = new TextView(this);
         status.setText(checkRustConnection());
+        status.setTextColor(Color.GRAY);
         root.addView(status);
 
         final EditText etTitle = new EditText(this);
         etTitle.setHint("Judul.md");
+        etTitle.setTextColor(Color.WHITE);
+        etTitle.setHintTextColor(Color.DKGRAY);
         root.addView(etTitle);
 
         final EditText etBody = new EditText(this);
-        etBody.setHint("Isi catatan...");
+        etBody.setHint("Tulis isi...");
         etBody.setLines(8);
+        etBody.setTextColor(Color.WHITE);
+        etBody.setHintTextColor(Color.DKGRAY);
         etBody.setGravity(Gravity.TOP);
         root.addView(etBody);
 
         final TextView tvPreview = new TextView(this);
+        tvPreview.setTextColor(Color.WHITE);
         tvPreview.setVisibility(View.GONE);
         root.addView(tvPreview);
 
@@ -53,7 +62,14 @@ public class MainActivity extends Activity {
         root.addView(btnRow);
 
         fileList = new ArrayList<>();
-        adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, fileList);
+        adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, fileList) {
+            @Override
+            public View getView(int pos, View convert, ViewGroup parent) {
+                View v = super.getView(pos, convert, parent);
+                ((TextView) v.findViewById(android.R.id.text1)).setTextColor(Color.CYAN);
+                return v;
+            }
+        };
         ListView lv = new ListView(this);
         lv.setAdapter(adapter);
         root.addView(lv);
@@ -72,7 +88,7 @@ public class MainActivity extends Activity {
             File f = new File(getExternalFilesDir(null), title);
             saveMarkdownNative(f.getAbsolutePath(), etBody.getText().toString());
             refresh.run();
-            Toast.makeText(this, "Saved!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Tersimpan!", Toast.LENGTH_SHORT).show();
         });
 
         btnToggle.setOnClickListener(v -> {
@@ -91,6 +107,8 @@ public class MainActivity extends Activity {
             String content = readMarkdownNative(new File(getExternalFilesDir(null), name).getAbsolutePath());
             etTitle.setText(name);
             etBody.setText(content);
+            tvPreview.setVisibility(View.GONE);
+            etBody.setVisibility(View.VISIBLE);
         });
 
         refresh.run();
