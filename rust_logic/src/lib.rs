@@ -1,5 +1,6 @@
 use jni::JNIEnv;
 use jni::objects::{JClass, JString};
+use jni::sys::jstring;
 
 #[no_mangle]
 pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getPasswordAdvice(
@@ -18,28 +19,30 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_getPasswordAdvice(
 
     let mut advice = Vec::new();
     
+    // Rincian Detail Alasan:
     if password.len() < 8 {
-        advice.push("Terlalu pendek (min. 8 karakter)");
+        advice.push("Kurang panjang (min. 8)");
     }
     if !password.chars().any(|c| c.is_uppercase()) {
-        advice.push("Tambahkan huruf besar");
+        advice.push("Butuh huruf besar");
     }
     if !password.chars().any(|c| c.is_numeric()) {
-        advice.push("Tambahkan angka");
+        advice.push("Butuh angka");
     }
     if !password.chars().any(|c| !c.is_alphanumeric()) {
-        advice.push("Tambahkan simbol (@,#,$,dll)");
+        advice.push("Butuh simbol (@,#,$,dll)");
     }
 
     let res = if advice.is_empty() {
         if password.len() >= 12 {
-            "Sangat Kuat: Kombinasi sempurna!".to_string()
+            "Sangat Kuat: Mantap, sulit ditembus!".to_string()
         } else {
-            "Cukup Kuat: Pertimbangkan buat lebih panjang.".to_string()
+            "Cukup: Aman, tapi lebih panjang lebih baik.".to_string()
         }
     } else {
         format!("Lemah: {}", advice.join(", "))
     };
 
+    // Kita ubah String Rust menjadi jstring JNI
     env.new_string(res).expect("Gagal buat string").into_raw()
 }
