@@ -4,6 +4,7 @@
 
     <application
         android:label="xpiz Mobile"
+        android:icon="@mipmap/ic_launcher"
         android:hasCode="true"
         android:allowBackup="true">
 
