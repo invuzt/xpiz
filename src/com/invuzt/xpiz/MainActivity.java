@@ -23,7 +23,6 @@ public class MainActivity extends Activity {
         root.setBackgroundColor(Color.WHITE);
         root.setPadding(40, 80, 40, 40);
 
-        // Header
         TextView tvLabel = new TextView(this);
         tvLabel.setText("LAWNFIZ");
         tvLabel.setTextSize(32);
@@ -31,21 +30,16 @@ public class MainActivity extends Activity {
         tvLabel.setTextColor(Color.BLACK);
         root.addView(tvLabel);
 
-        // Tombol Paksa Set Default
         Button btnSet = new Button(this);
-        btnSet.setText("KLIK INI: AKTIFKAN LAUNCHER");
+        btnSet.setText("AKTIFKAN SEBAGAI HOME");
         btnSet.setOnClickListener(v -> {
-            try {
-                // Mencoba langsung ke menu home app
-                startActivity(new Intent(Settings.ACTION_HOME_SETTINGS));
-            } catch (Exception e) {
-                // Fallback ke pengaturan aplikasi default
-                startActivity(new Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS));
-            }
+            Intent intent = new Intent(Intent.ACTION_MAIN);
+            intent.addCategory(Intent.CATEGORY_HOME);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
         });
         root.addView(btnSet);
 
-        // List Aplikasi
         ListView lv = new ListView(this);
         final List<ResolveInfo> apps = getApps();
         List<String> names = new ArrayList<>();
@@ -55,14 +49,17 @@ public class MainActivity extends Activity {
             @Override
             public View getView(int p, View c, ViewGroup pg) {
                 View v = super.getView(p, c, pg);
-                ((TextView) v.findViewById(android.R.id.text1)).setTextColor(Color.BLACK);
+                TextView txt = v.findViewById(android.R.id.text1);
+                txt.setTextColor(Color.BLACK);
+                txt.setPadding(20, 20, 20, 20);
                 return v;
             }
         });
 
         lv.setOnItemClickListener((p, v, pos, id) -> {
             String pkg = apps.get(pos).activityInfo.packageName;
-            startActivity(getPackageManager().getLaunchIntentForPackage(pkg));
+            Intent i = getPackageManager().getLaunchIntentForPackage(pkg);
+            if(i != null) startActivity(i);
         });
 
         root.addView(lv);
@@ -79,6 +76,6 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        // Launcher tidak boleh ditutup dengan tombol back
+        // Biar tetap di home
     }
 }
