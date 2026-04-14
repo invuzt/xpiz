@@ -7,18 +7,14 @@
         android:icon="@android:drawable/sym_def_app_icon"
         android:hasCode="true"
         android:theme="@android:style/Theme.Light.NoTitleBar">
-        
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleInstance"
-            android:stateNotNeeded="true"
-            android:clearTaskOnLaunch="true">
-            
-            <intent-filter android:priority="1000">
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|keyboardHidden|screenSize">
+            <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.HOME" />
-                <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>

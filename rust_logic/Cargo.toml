@@ -1,6 +1,6 @@
 [package]
 name = "xpiz_core"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 
 [lib]
@@ -9,11 +9,12 @@ crate-type = ["staticlib", "cdylib"]
 
 [dependencies]
 jni = "0.21.1"
+# Pustaka untuk mengevaluasi ekspresi matematika string
+evalexpr = "8.1"
 
 [profile.release]
-opt-level = 'z'     # Optimasi ukuran (bisa juga 's')
-lto = true          # Link Time Optimization (gabungkan semua crate jadi satu biner efisien)
-codegen-units = 1   # Membuat optimasi lebih maksimal (tapi build sedikit lebih lama)
-panic = 'abort'     # Menghapus stack unwinding, mengecilkan ukuran biner secara drastis
-strip = true        # Otomatis hapus simbol debug (tidak perlu pakai command strip manual)
-
+opt-level = 'z'
+lto = true
+codegen-units = 1
+panic = 'abort'
+strip = true
