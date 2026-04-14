@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.pm.ResolveInfo;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.Settings;
 import android.widget.*;
 import android.view.*;
 import android.graphics.*;
@@ -46,7 +47,6 @@ public class MainActivity extends Activity {
         root.setPadding(40, 60, 40, 40);
         root.setBackgroundColor(Color.WHITE);
 
-        // Header Jam ala Launcher
         TextView tvTime = new TextView(this);
         tvTime.setText(new java.text.SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date()));
         tvTime.setTextSize(48);
@@ -55,12 +55,12 @@ public class MainActivity extends Activity {
         root.addView(tvTime);
 
         etTitle = new EditText(this);
-        etTitle.setHint("Judul Catatan...");
+        etTitle.setHint("Judul...");
         etTitle.setTextColor(Color.BLACK);
         root.addView(etTitle);
 
         etBody = new EditText(this);
-        etBody.setHint("Tulis ide cerdasmu di sini...");
+        etBody.setHint("Tulis ide...");
         etBody.setLines(4);
         etBody.setTextColor(Color.BLACK);
         root.addView(etBody);
@@ -72,13 +72,20 @@ public class MainActivity extends Activity {
         tvPreview.setMovementMethod(LinkMovementMethod.getInstance());
         root.addView(tvPreview);
 
+        // Baris Tombol Menu
+        HorizontalScrollView hsv = new HorizontalScrollView(this);
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setGravity(Gravity.CENTER);
+        
         Button btnSave = new Button(this); btnSave.setText("Simpan");
         Button btnGraph = new Button(this); btnGraph.setText("Graph");
         Button btnApps = new Button(this); btnApps.setText("Apps");
-        btnRow.addView(btnSave); btnRow.addView(btnGraph); btnRow.addView(btnApps);
-        root.addView(btnRow);
+        Button btnSetHome = new Button(this); btnSetHome.setText("Set Home"); // Tombol baru
+
+        btnRow.addView(btnSave); btnRow.addView(btnGraph); 
+        btnRow.addView(btnApps); btnRow.addView(btnSetHome);
+        hsv.addView(btnRow);
+        root.addView(hsv);
 
         fileList = new ArrayList<>();
         adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, fileList) {
@@ -99,15 +106,21 @@ public class MainActivity extends Activity {
             if(!t.endsWith(".md")) t += ".md";
             saveMarkdownNative(new File(getVaultFolder(), t).getAbsolutePath(), etBody.getText().toString());
             refreshVault();
-            Toast.makeText(this, "Tersimpan di Documents/OdfizVault", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Tersimpan", Toast.LENGTH_SHORT).show();
         });
 
         btnApps.setOnClickListener(v -> showAppDrawer());
         btnGraph.setOnClickListener(v -> showGraph());
+        btnSetHome.setOnClickListener(v -> openHomeSettings());
         lv.setOnItemClickListener((p, v, pos, id) -> openFile(fileList.get(pos)));
 
         refreshVault();
         setContentView(root);
+    }
+
+    private void openHomeSettings() {
+        Intent intent = new Intent(Settings.ACTION_HOME_SETTINGS);
+        startActivity(intent);
     }
 
     private void refreshVault() {
@@ -132,12 +145,6 @@ public class MainActivity extends Activity {
         drawer.setBackgroundColor(Color.WHITE);
         drawer.setPadding(20, 20, 20, 20);
 
-        TextView title = new TextView(this);
-        title.setText("Semua Aplikasi");
-        title.setTextSize(24);
-        title.setTextColor(Color.BLACK);
-        drawer.addView(title);
-
         ListView lvApps = new ListView(this);
         final Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
         mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
@@ -150,7 +157,7 @@ public class MainActivity extends Activity {
         lvApps.setOnItemClickListener((p, v, pos, id) -> {
             ResolveInfo info = pkgList.get(pos);
             Intent i = getPackageManager().getLaunchIntentForPackage(info.activityInfo.packageName);
-            startActivity(i);
+            if(i != null) startActivity(i);
             d.dismiss();
         });
 
@@ -160,6 +167,7 @@ public class MainActivity extends Activity {
     }
 
     private void showGraph() {
+        // [Kode ZoomGraphView tetap sama seperti sebelumnya]
         String data = getGraphDataNative(getVaultFolder().getAbsolutePath());
         final Dialog d = new Dialog(this, android.R.style.Theme_Light_NoTitleBar_Fullscreen);
         
