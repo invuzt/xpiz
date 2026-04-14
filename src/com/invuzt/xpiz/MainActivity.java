@@ -8,7 +8,6 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.*;
 import java.util.*;
 
@@ -23,30 +22,21 @@ public class MainActivity extends Activity {
         root.setBackgroundColor(Color.WHITE);
         root.setPadding(40, 80, 40, 40);
 
-        TextView tvLabel = new TextView(this);
-        tvLabel.setText("LAWNFIZ");
-        tvLabel.setTextSize(32);
-        tvLabel.setGravity(Gravity.CENTER);
-        tvLabel.setTextColor(Color.BLACK);
-        root.addView(tvLabel);
+        TextView tv = new TextView(this);
+        tv.setText("LAWNFIZ READY");
+        tv.setTextSize(24);
+        tv.setTextColor(Color.BLACK);
+        tv.setGravity(Gravity.CENTER);
+        root.addView(tv);
 
         Button btnSet = new Button(this);
-        btnSet.setText("PILIH SEBAGAI HOME");
+        btnSet.setText("PANCING PILIHAN HOME");
         btnSet.setOnClickListener(v -> {
-            try {
-                // Metode 1: Langsung ke setelan Home (Paling aman)
-                Intent intent = new Intent(Settings.ACTION_HOME_SETTINGS);
-                startActivity(intent);
-            } catch (Exception e) {
-                try {
-                    // Metode 2: Jika gagal, pancing dengan intent HOME
-                    Intent homeIntent = new Intent(Intent.ACTION_MAIN);
-                    homeIntent.addCategory(Intent.CATEGORY_HOME);
-                    startActivity(Intent.createChooser(homeIntent, "Pilih Lawnfiz"));
-                } catch (Exception e2) {
-                    Toast.makeText(this, "Buka Manual: Settings > Apps > Default Apps > Home", Toast.LENGTH_LONG).show();
-                }
-            }
+            // Cara paling ampuh: kirim intent HOME tanpa package, 
+            // Android akan bingung dan nanya "Mau pakai yang mana?"
+            Intent selector = new Intent(Intent.ACTION_MAIN);
+            selector.addCategory(Intent.CATEGORY_HOME);
+            startActivity(Intent.createChooser(selector, "Pilih Lawnfiz sebagai Home"));
         });
         root.addView(btnSet);
 
@@ -55,23 +45,13 @@ public class MainActivity extends Activity {
         List<String> names = new ArrayList<>();
         for (ResolveInfo r : apps) names.add(r.loadLabel(getPackageManager()).toString());
 
-        lv.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, names) {
-            @Override
-            public View getView(int p, View c, ViewGroup pg) {
-                View v = super.getView(p, c, pg);
-                TextView txt = v.findViewById(android.R.id.text1);
-                txt.setTextColor(Color.BLACK);
-                return v;
-            }
-        });
-
+        lv.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, names));
         lv.setOnItemClickListener((p, v, pos, id) -> {
             String pkg = apps.get(pos).activityInfo.packageName;
-            Intent i = getPackageManager().getLaunchIntentForPackage(pkg);
-            if(i != null) startActivity(i);
+            startActivity(getPackageManager().getLaunchIntentForPackage(pkg));
         });
-
         root.addView(lv);
+
         setContentView(root);
     }
 
@@ -83,8 +63,5 @@ public class MainActivity extends Activity {
         return l;
     }
 
-    @Override
-    public void onBackPressed() {
-        // Jangan biarkan menutup aplikasi
-    }
+    @Override public void onBackPressed() {}
 }
