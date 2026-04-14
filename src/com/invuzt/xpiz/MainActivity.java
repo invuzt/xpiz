@@ -18,85 +18,67 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Layout Utama (Light Mode)
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.WHITE);
-        root.setPadding(50, 100, 50, 50);
+        root.setPadding(40, 80, 40, 40);
 
-        // Jam
-        TextView tvClock = new TextView(this);
-        tvClock.setText(new java.text.SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date()));
-        tvClock.setTextSize(60);
-        tvClock.setTextColor(Color.BLACK);
-        tvClock.setGravity(Gravity.CENTER);
-        root.addView(tvClock);
-
+        // Header
         TextView tvLabel = new TextView(this);
         tvLabel.setText("LAWNFIZ");
+        tvLabel.setTextSize(32);
         tvLabel.setGravity(Gravity.CENTER);
-        tvLabel.setTextColor(Color.GRAY);
+        tvLabel.setTextColor(Color.BLACK);
         root.addView(tvLabel);
 
-        // Spacer
-        View spacer = new View(this);
-        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(0, 100);
-        root.addView(spacer, sp);
-
-        // Tombol Atur Default Launcher
-        Button btnSetDefault = new Button(this);
-        btnSetDefault.setText("SET DEFAULT LAUNCHER");
-        btnSetDefault.setOnClickListener(v -> {
-            Intent intent = new Intent(Settings.ACTION_HOME_SETTINGS);
-            startActivity(intent);
+        // Tombol Paksa Set Default
+        Button btnSet = new Button(this);
+        btnSet.setText("KLIK INI: AKTIFKAN LAUNCHER");
+        btnSet.setOnClickListener(v -> {
+            try {
+                // Mencoba langsung ke menu home app
+                startActivity(new Intent(Settings.ACTION_HOME_SETTINGS));
+            } catch (Exception e) {
+                // Fallback ke pengaturan aplikasi default
+                startActivity(new Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS));
+            }
         });
-        root.addView(btnSetDefault);
+        root.addView(btnSet);
 
-        // Daftar Aplikasi (App Drawer Langsung di Bawah)
-        TextView tvTitle = new TextView(this);
-        tvTitle.setText("\nSemua Aplikasi:");
-        tvTitle.setTextColor(Color.BLACK);
-        root.addView(tvTitle);
+        // List Aplikasi
+        ListView lv = new ListView(this);
+        final List<ResolveInfo> apps = getApps();
+        List<String> names = new ArrayList<>();
+        for (ResolveInfo r : apps) names.add(r.loadLabel(getPackageManager()).toString());
 
-        ListView lvApps = new ListView(this);
-        final List<ResolveInfo> pkgList = getApps();
-        
-        List<String> appNames = new ArrayList<>();
-        for (ResolveInfo ri : pkgList) {
-            appNames.add(ri.loadLabel(getPackageManager()).toString());
-        }
-
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, appNames) {
+        lv.setAdapter(new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, names) {
             @Override
-            public View getView(int pos, View convert, ViewGroup parent) {
-                View v = super.getView(pos, convert, parent);
+            public View getView(int p, View c, ViewGroup pg) {
+                View v = super.getView(p, c, pg);
                 ((TextView) v.findViewById(android.R.id.text1)).setTextColor(Color.BLACK);
                 return v;
             }
-        };
-
-        lvApps.setAdapter(adapter);
-        lvApps.setOnItemClickListener((p, v, pos, id) -> {
-            String pkg = pkgList.get(pos).activityInfo.packageName;
-            Intent i = getPackageManager().getLaunchIntentForPackage(pkg);
-            if(i != null) startActivity(i);
         });
 
-        root.addView(lvApps);
+        lv.setOnItemClickListener((p, v, pos, id) -> {
+            String pkg = apps.get(pos).activityInfo.packageName;
+            startActivity(getPackageManager().getLaunchIntentForPackage(pkg));
+        });
+
+        root.addView(lv);
         setContentView(root);
     }
 
     private List<ResolveInfo> getApps() {
-        Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
-        mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
-        List<ResolveInfo> list = getPackageManager().queryIntentActivities(mainIntent, 0);
-        Collections.sort(list, new ResolveInfo.DisplayNameComparator(getPackageManager()));
-        return list;
+        Intent i = new Intent(Intent.ACTION_MAIN, null);
+        i.addCategory(Intent.CATEGORY_LAUNCHER);
+        List<ResolveInfo> l = getPackageManager().queryIntentActivities(i, 0);
+        Collections.sort(l, new ResolveInfo.DisplayNameComparator(getPackageManager()));
+        return l;
     }
 
-    // Mencegah tombol back menutup launcher
     @Override
     public void onBackPressed() {
-        // Do nothing
+        // Launcher tidak boleh ditutup dengan tombol back
     }
 }

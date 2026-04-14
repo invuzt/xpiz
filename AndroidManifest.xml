@@ -5,24 +5,20 @@
     <application
         android:label="Lawnfiz"
         android:icon="@drawable/ic_launcher"
-        android:hasCode="true">
+        android:hasCode="true"
+        android:theme="@android:style/Theme.Light.NoTitleBar">
         
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
-            android:clearTaskOnLaunch="true"
             android:stateNotNeeded="true">
             
-            <intent-filter android:priority="1">
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHer" />
-            </intent-filter>
-
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
     </application>
