@@ -11,235 +11,138 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.*;
-import java.util.ArrayList;
 
 public class MainActivity extends Activity {
     static { System.loadLibrary("hello"); }
-
-    private native String calculateNative(String expression, boolean isDegree);
+    private native String calculateNative(String expression, boolean b);
 
     private TextView tvDisplayExp, tvDisplayResult;
     private LinearLayout historyLayout;
     private String currentInput = "";
-    private boolean isDegree = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // ROOT: Menggunakan RelativeLayout agar Display dan Tombol terpisah rapi
         RelativeLayout root = new RelativeLayout(this);
-        root.setBackgroundColor(Color.parseColor("#F1F3F4"));
-        root.setPadding(30, 30, 30, 30);
+        root.setBackgroundColor(Color.WHITE);
+        root.setPadding(20, 20, 20, 20);
 
-        // --- 1. DISPLAY AREA (Paling Atas) ---
+        // --- DISPLAY ---
         LinearLayout displayArea = new LinearLayout(this);
         displayArea.setId(View.generateViewId());
         displayArea.setOrientation(LinearLayout.VERTICAL);
-        displayArea.setPadding(30, 50, 30, 30);
-        displayArea.setBackgroundColor(Color.WHITE);
+        displayArea.setPadding(30, 80, 30, 50);
         
-        RelativeLayout.LayoutParams displayParams = new RelativeLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 
-                ViewGroup.LayoutParams.WRAP_CONTENT);
-        displayParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
-        displayArea.setLayoutParams(displayParams);
+        RelativeLayout.LayoutParams dp = new RelativeLayout.LayoutParams(-1, -2);
+        dp.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+        displayArea.setLayoutParams(dp);
 
-        // Ekspresi kecil (misal: 3+2) - Pindah ke bawah
-        tvDisplayExp = new TextView(this);
-        tvDisplayExp.setTextSize(22);
-        tvDisplayExp.setTextColor(Color.GRAY);
-        tvDisplayExp.setGravity(Gravity.END);
-        tvDisplayExp.setText(" ");
-        tvDisplayExp.setPadding(0, 0, 0, 10);
-
-        // Hasil Besar (misal: 5) - Pindah ke Atas
         tvDisplayResult = new TextView(this);
-        tvDisplayResult.setTextSize(48); // Lebih besar
+        tvDisplayResult.setTextSize(60);
         tvDisplayResult.setTextColor(Color.BLACK);
-        tvDisplayResult.setTypeface(null, Typeface.BOLD);
         tvDisplayResult.setGravity(Gravity.END);
+        tvDisplayResult.setTypeface(null, Typeface.BOLD);
         tvDisplayResult.setText("0");
         tvDisplayResult.setOnClickListener(v -> copyToClipboard(tvDisplayResult.getText().toString()));
 
-        // Susun: Hasil Besar di atas Ekspresi Kecil
+        tvDisplayExp = new TextView(this);
+        tvDisplayExp.setTextSize(24);
+        tvDisplayExp.setTextColor(Color.GRAY);
+        tvDisplayExp.setGravity(Gravity.END);
+        tvDisplayExp.setText(" ");
+
         displayArea.addView(tvDisplayResult);
         displayArea.addView(tvDisplayExp);
         root.addView(displayArea);
 
-
-        // --- 2. LAYOUT TOMBOL (Bawah Display) ---
-        LinearLayout buttonArea = new LinearLayout(this);
-        buttonArea.setId(View.generateViewId());
-        buttonArea.setOrientation(LinearLayout.VERTICAL);
-        
-        RelativeLayout.LayoutParams buttonParams = new RelativeLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 
-                ViewGroup.LayoutParams.WRAP_CONTENT);
-        buttonParams.addRule(RelativeLayout.BELOW, displayArea.getId()); // Tepat di bawah Display
-        buttonParams.setMargins(0, 30, 0, 0); // Spasi kecil
-        buttonArea.setLayoutParams(buttonParams);
-
-        // Tombol Mode DEG/RAD (Memakai layout full width)
-        Button btnMode = new Button(this);
-        btnMode.setText("DEG");
-        btnMode.setTransformationMethod(null); // Jangan Caps
-        LinearLayout.LayoutParams modeParams = new LinearLayout.LayoutParams(-1, -2);
-        modeParams.setMargins(0, 0, 0, 15);
-        btnMode.setLayoutParams(modeParams);
-        btnMode.setOnClickListener(v -> {
-            isDegree = !isDegree;
-            btnMode.setText(isDegree ? "DEG" : "RAD");
-            updateCalculation();
-        });
-        buttonArea.addView(btnMode);
-
-        // GRID TOMBOL UTAMA (Ditingkatkan ukurannya)
+        // --- TOMBOL (GRID 4x5) ---
         GridLayout grid = new GridLayout(this);
         grid.setColumnCount(4);
-        grid.setAlignmentMode(GridLayout.ALIGN_BOUNDS);
-        grid.setRowOrderPreserved(false);
-        grid.setLayoutParams(new LinearLayout.LayoutParams(-1, -2));
+        RelativeLayout.LayoutParams gp = new RelativeLayout.LayoutParams(-1, -2);
+        gp.addRule(RelativeLayout.BELOW, displayArea.getId());
+        grid.setLayoutParams(gp);
 
         String[] buttons = {
             "C", "(", ")", "÷",
             "7", "8", "9", "×",
             "4", "5", "6", "-",
             "1", "2", "3", "+",
-            "0", ".", "π", "=",
-            "sin", "cos", "tan", "sqrt"
+            "0", ".", "DEL", "="
         };
 
-        // Menghitung lebar layar untuk tombol yang presisi
-        int screenWidth = getResources().getDisplayMetrics().widthPixels - 60; // Kurangi padding root
-        int buttonSize = (screenWidth / 4) - 10; // Dibagi 4 kolom, dikurangi margin
+        int btnW = (getResources().getDisplayMetrics().widthPixels - 60) / 4;
+        int btnH = (int)(btnW * 1.1);
 
         for (String text : buttons) {
             Button b = new Button(this);
             b.setText(text);
-            b.setTextSize(22); // Teks tombol lebih besar
-            b.setTransformationMethod(null); // Jangan Caps otomatis
-            b.setPadding(0,0,0,0);
-            b.setOnClickListener(v -> onButtonClick(text));
+            b.setTextSize(26);
+            b.setTransformationMethod(null);
             
-            GridLayout.LayoutParams params = new GridLayout.LayoutParams();
-            params.width = buttonSize;
-            params.height = (int)(buttonSize * 0.9); // Tinggi sedikit lebih pendek dari lebar
-            params.setMargins(5, 5, 5, 5); // Margin antar tombol
-            b.setLayoutParams(params);
-            
-            // Warna tombol khusus
-            if (text.equals("=") || text.equals("C")) {
-                b.setBackgroundColor(Color.parseColor("#34A853")); // Hijau
-                b.setTextColor(Color.WHITE);
-            } else if ("÷×-+".contains(text)) {
-                 b.setBackgroundColor(Color.parseColor("#DADCE0")); // Abu terang
-                 b.setTextColor(Color.BLACK);
-            } else {
-                 b.setBackgroundColor(Color.parseColor("#F8F9FA")); // Putih bersih
-                 b.setTextColor(Color.BLACK);
-            }
+            GridLayout.LayoutParams p = new GridLayout.LayoutParams();
+            p.width = btnW; p.height = btnH;
+            p.setMargins(5, 5, 5, 5);
+            b.setLayoutParams(p);
 
+            if (text.equals("=")) b.setBackgroundColor(Color.parseColor("#4CAF50"));
+            else if (text.equals("C")) b.setBackgroundColor(Color.parseColor("#F44336"));
+            else b.setBackgroundColor(Color.parseColor("#EEEEEE"));
+            
+            if (text.equals("=")) b.setTextColor(Color.WHITE);
+            else if (text.equals("C")) b.setTextColor(Color.WHITE);
+            else b.setTextColor(Color.BLACK);
+
+            b.setOnClickListener(v -> onBtnClick(text));
             grid.addView(b);
         }
-        buttonArea.addView(grid);
-        root.addView(buttonArea);
+        root.addView(grid);
 
+        // --- RIWAYAT ---
+        ScrollView scroll = new ScrollView(this);
+        RelativeLayout.LayoutParams sp = new RelativeLayout.LayoutParams(-1, -1);
+        sp.addRule(RelativeLayout.BELOW, grid.getId());
+        sp.setMargins(0, 40, 0, 0);
+        scroll.setLayoutParams(sp);
 
-        // --- 3. RIWAYAT (Di bawah tombol, Scrollable) ---
-        TextView histHeader = new TextView(this);
-        histHeader.setId(View.generateViewId());
-        histHeader.setText("RIWAYAT (Klik hasil untuk salin)");
-        histHeader.setPadding(10, 30, 10, 10);
-        histHeader.setTypeface(null, Typeface.BOLD);
-        
-        RelativeLayout.LayoutParams headerParams = new RelativeLayout.LayoutParams(-1, -2);
-        headerParams.addRule(RelativeLayout.BELOW, buttonArea.getId());
-        histHeader.setLayoutParams(headerParams);
-        root.addView(histHeader);
-
-        ScrollView scrollHist = new ScrollView(this);
-        RelativeLayout.LayoutParams scrollParams = new RelativeLayout.LayoutParams(-1, -1);
-        scrollParams.addRule(RelativeLayout.BELOW, histHeader.getId());
-        scrollHist.setLayoutParams(scrollParams);
-        
         historyLayout = new LinearLayout(this);
         historyLayout.setOrientation(LinearLayout.VERTICAL);
-        scrollHist.addView(historyLayout);
-        root.addView(scrollHist);
+        scroll.addView(historyLayout);
+        root.addView(scroll);
 
         setContentView(root);
     }
 
-    private void onButtonClick(String text) {
-        if (text.equals("C")) {
-            currentInput = "";
-            tvDisplayExp.setText(" ");
-            tvDisplayResult.setText("0");
-            return;
+    private void onBtnClick(String text) {
+        if (text.equals("C")) currentInput = "";
+        else if (text.equals("DEL")) {
+            if (currentInput.length() > 0) currentInput = currentInput.substring(0, currentInput.length()-1);
         } else if (text.equals("=")) {
             String res = tvDisplayResult.getText().toString();
-            if (!res.equals("0") && !res.equals("Error") && !currentInput.isEmpty()) {
+            if (!res.isEmpty() && !res.equals("0")) {
                 addToHistory(currentInput + " = " + res);
-                currentInput = res; // Hasil jadi input baru
-                tvDisplayExp.setText(res);
+                currentInput = res;
             }
-        } else if (text.equals("sin") || text.equals("cos") || text.equals("tan") || text.equals("sqrt")) {
-            currentInput += text + "(";
-        } else if (text.equals("×")) {
-             currentInput += "*";
-        } else if (text.equals("÷")) {
-             currentInput += "/";
         } else {
             currentInput += text;
         }
         
-        // Update display ekspresi (selalu di bawah)
-        String displayText = currentInput
-            .replace("*", "×")
-            .replace("/", "÷");
-        tvDisplayExp.setText(displayText.isEmpty() ? " " : displayText);
-        
-        // Update hasil real-time (di atas)
-        updateCalculation();
-    }
-
-    private void updateCalculation() {
-        if (currentInput.isEmpty()) {
-             tvDisplayResult.setText("0");
-             return;
-        }
-        
-        try {
-            // Panggil Rust native function
-            String res = calculateNative(currentInput, isDegree);
-            tvDisplayResult.setText(res);
-        } catch (Exception e) {
-            tvDisplayResult.setText("Error");
-        }
+        tvDisplayExp.setText(currentInput.isEmpty() ? " " : currentInput);
+        String r = calculateNative(currentInput, false);
+        tvDisplayResult.setText(r.isEmpty() ? "0" : r);
     }
 
     private void addToHistory(String item) {
-        TextView tv = new TextView(this);
-        tv.setText(item);
-        tv.setPadding(15, 10, 15, 10);
-        tv.setTextSize(16);
-        tv.setBackgroundColor(Color.WHITE);
-        
-        // Tambahkan margin antar item riwayat
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
-        params.setMargins(0, 2, 0, 2);
-        tv.setLayoutParams(params);
-
-        tv.setOnClickListener(v -> copyToClipboard(item.split("=")[1].trim()));
-        historyLayout.addView(tv, 0); // Tambah ke paling atas
+        TextView h = new TextView(this);
+        h.setText(item);
+        h.setPadding(10, 10, 10, 10);
+        h.setOnClickListener(v -> copyToClipboard(item.split("=")[1].trim()));
+        historyLayout.addView(h, 0);
     }
 
-    private void copyToClipboard(String text) {
-        if (text.isEmpty() || text.equals("0") || text.equals("Error")) return;
-        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        ClipData clip = ClipData.newPlainText("calc_res", text);
-        clipboard.setPrimaryClip(clip);
-        Toast.makeText(this, "Copied: " + text, Toast.LENGTH_SHORT).show();
+    private void copyToClipboard(String t) {
+        ClipboardManager cb = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        cb.setPrimaryClip(ClipData.newPlainText("res", t));
+        Toast.makeText(this, "Copied: " + t, Toast.LENGTH_SHORT).show();
     }
 }
