@@ -31,12 +31,22 @@ public class MainActivity extends Activity {
         root.addView(tvLabel);
 
         Button btnSet = new Button(this);
-        btnSet.setText("AKTIFKAN SEBAGAI HOME");
+        btnSet.setText("PILIH SEBAGAI HOME");
         btnSet.setOnClickListener(v -> {
-            Intent intent = new Intent(Intent.ACTION_MAIN);
-            intent.addCategory(Intent.CATEGORY_HOME);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
+            try {
+                // Metode 1: Langsung ke setelan Home (Paling aman)
+                Intent intent = new Intent(Settings.ACTION_HOME_SETTINGS);
+                startActivity(intent);
+            } catch (Exception e) {
+                try {
+                    // Metode 2: Jika gagal, pancing dengan intent HOME
+                    Intent homeIntent = new Intent(Intent.ACTION_MAIN);
+                    homeIntent.addCategory(Intent.CATEGORY_HOME);
+                    startActivity(Intent.createChooser(homeIntent, "Pilih Lawnfiz"));
+                } catch (Exception e2) {
+                    Toast.makeText(this, "Buka Manual: Settings > Apps > Default Apps > Home", Toast.LENGTH_LONG).show();
+                }
+            }
         });
         root.addView(btnSet);
 
@@ -51,7 +61,6 @@ public class MainActivity extends Activity {
                 View v = super.getView(p, c, pg);
                 TextView txt = v.findViewById(android.R.id.text1);
                 txt.setTextColor(Color.BLACK);
-                txt.setPadding(20, 20, 20, 20);
                 return v;
             }
         });
@@ -76,6 +85,6 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        // Biar tetap di home
+        // Jangan biarkan menutup aplikasi
     }
 }

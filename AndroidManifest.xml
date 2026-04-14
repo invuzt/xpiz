@@ -11,8 +11,9 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleTask"
-            android:stateNotNeeded="true">
+            android:launchMode="singleInstance"
+            android:stateNotNeeded="true"
+            android:excludeFromRecents="false">
             
             <intent-filter android:priority="1">
                 <action android:name="android.intent.action.MAIN" />
