@@ -2,6 +2,8 @@ package com.invuzt.xpiz;
 
 import android.app.Activity;
 import android.app.Dialog;
+import android.content.Intent;
+import android.content.pm.ResolveInfo;
 import android.os.Bundle;
 import android.os.Environment;
 import android.widget.*;
@@ -41,19 +43,26 @@ public class MainActivity extends Activity {
         
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(30, 30, 30, 30);
+        root.setPadding(40, 60, 40, 40);
         root.setBackgroundColor(Color.WHITE);
 
+        // Header Jam ala Launcher
+        TextView tvTime = new TextView(this);
+        tvTime.setText(new java.text.SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date()));
+        tvTime.setTextSize(48);
+        tvTime.setTextColor(Color.BLACK);
+        tvTime.setGravity(Gravity.CENTER);
+        root.addView(tvTime);
+
         etTitle = new EditText(this);
-        etTitle.setHint("Judul (tanpa .md)");
+        etTitle.setHint("Judul Catatan...");
         etTitle.setTextColor(Color.BLACK);
         root.addView(etTitle);
 
         etBody = new EditText(this);
-        etBody.setHint("Tulis isi...");
-        etBody.setLines(8);
+        etBody.setHint("Tulis ide cerdasmu di sini...");
+        etBody.setLines(4);
         etBody.setTextColor(Color.BLACK);
-        etBody.setGravity(Gravity.TOP);
         root.addView(etBody);
 
         tvPreview = new TextView(this);
@@ -63,20 +72,20 @@ public class MainActivity extends Activity {
         tvPreview.setMovementMethod(LinkMovementMethod.getInstance());
         root.addView(tvPreview);
 
-        LinearLayout row = new LinearLayout(this);
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setGravity(Gravity.CENTER);
         Button btnSave = new Button(this); btnSave.setText("Simpan");
-        Button btnToggle = new Button(this); btnToggle.setText("Preview");
         Button btnGraph = new Button(this); btnGraph.setText("Graph");
-        row.addView(btnSave); row.addView(btnToggle); row.addView(btnGraph);
-        root.addView(row);
+        Button btnApps = new Button(this); btnApps.setText("Apps");
+        btnRow.addView(btnSave); btnRow.addView(btnGraph); btnRow.addView(btnApps);
+        root.addView(btnRow);
 
         fileList = new ArrayList<>();
         adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, fileList) {
             @Override
             public View getView(int pos, View convert, ViewGroup parent) {
                 View v = super.getView(pos, convert, parent);
-                TextView txt = (TextView) v.findViewById(android.R.id.text1);
-                txt.setTextColor(Color.BLACK);
+                ((TextView) v.findViewById(android.R.id.text1)).setTextColor(Color.BLACK);
                 return v;
             }
         };
@@ -84,58 +93,70 @@ public class MainActivity extends Activity {
         lv.setAdapter(adapter);
         root.addView(lv);
 
-        Runnable refresh = () -> {
-            String res = listVaultFiles(getVaultFolder().getAbsolutePath());
-            fileList.clear();
-            if(!res.equals("Kosong")) for(String f : res.split("\\|")) fileList.add(f);
-            adapter.notifyDataSetChanged();
-        };
-
         btnSave.setOnClickListener(v -> {
             String t = etTitle.getText().toString();
-            if(t.isEmpty()) return;
+            if(t.isEmpty()) t = "Ide_" + System.currentTimeMillis();
             if(!t.endsWith(".md")) t += ".md";
             saveMarkdownNative(new File(getVaultFolder(), t).getAbsolutePath(), etBody.getText().toString());
-            refresh.run();
+            refreshVault();
             Toast.makeText(this, "Tersimpan di Documents/OdfizVault", Toast.LENGTH_SHORT).show();
         });
 
-        btnToggle.setOnClickListener(v -> {
-            if(tvPreview.getVisibility() == View.GONE) {
-                String html = renderMarkdownNative(etBody.getText().toString());
-                SpannableStringBuilder ssb = new SpannableStringBuilder(Html.fromHtml(html));
-                URLSpan[] spans = ssb.getSpans(0, ssb.length(), URLSpan.class);
-                for (URLSpan span : spans) {
-                    int start = ssb.getSpanStart(span);
-                    int end = ssb.getSpanEnd(span);
-                    String target = span.getURL();
-                    ssb.setSpan(new ClickableSpan() {
-                        @Override public void onClick(View w) { openFile(target); }
-                    }, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-                    ssb.removeSpan(span);
-                }
-                tvPreview.setText(ssb);
-                tvPreview.setVisibility(View.VISIBLE); etBody.setVisibility(View.GONE);
-            } else {
-                tvPreview.setVisibility(View.GONE); etBody.setVisibility(View.VISIBLE);
-            }
-        });
-
+        btnApps.setOnClickListener(v -> showAppDrawer());
         btnGraph.setOnClickListener(v -> showGraph());
         lv.setOnItemClickListener((p, v, pos, id) -> openFile(fileList.get(pos)));
 
-        refresh.run();
+        refreshVault();
         setContentView(root);
     }
 
+    private void refreshVault() {
+        String res = listVaultFiles(getVaultFolder().getAbsolutePath());
+        fileList.clear();
+        if(!res.equals("Kosong")) for(String f : res.split("\\|")) fileList.add(f);
+        adapter.notifyDataSetChanged();
+    }
+
     private void openFile(String name) {
-        if(!name.endsWith(".md")) name += ".md";
         File f = new File(getVaultFolder(), name);
         etTitle.setText(name);
-        if(f.exists()) etBody.setText(readMarkdownNative(f.getAbsolutePath()));
-        else etBody.setText("");
+        etBody.setText(readMarkdownNative(f.getAbsolutePath()));
         tvPreview.setVisibility(View.GONE);
         etBody.setVisibility(View.VISIBLE);
+    }
+
+    private void showAppDrawer() {
+        final Dialog d = new Dialog(this, android.R.style.Theme_Light_NoTitleBar_Fullscreen);
+        LinearLayout drawer = new LinearLayout(this);
+        drawer.setOrientation(LinearLayout.VERTICAL);
+        drawer.setBackgroundColor(Color.WHITE);
+        drawer.setPadding(20, 20, 20, 20);
+
+        TextView title = new TextView(this);
+        title.setText("Semua Aplikasi");
+        title.setTextSize(24);
+        title.setTextColor(Color.BLACK);
+        drawer.addView(title);
+
+        ListView lvApps = new ListView(this);
+        final Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
+        mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+        final List<ResolveInfo> pkgList = getPackageManager().queryIntentActivities(mainIntent, 0);
+        
+        List<String> appNames = new ArrayList<>();
+        for (ResolveInfo ri : pkgList) appNames.add(ri.loadLabel(getPackageManager()).toString());
+
+        lvApps.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, appNames));
+        lvApps.setOnItemClickListener((p, v, pos, id) -> {
+            ResolveInfo info = pkgList.get(pos);
+            Intent i = getPackageManager().getLaunchIntentForPackage(info.activityInfo.packageName);
+            startActivity(i);
+            d.dismiss();
+        });
+
+        drawer.addView(lvApps);
+        d.setContentView(drawer);
+        d.show();
     }
 
     private void showGraph() {
@@ -159,7 +180,6 @@ public class MainActivity extends Activity {
                         return true;
                     }
                 });
-                
                 if(!data.equals("Kosong")) {
                     Random r = new Random();
                     for(String pair : data.split("\\|")) {
@@ -174,11 +194,9 @@ public class MainActivity extends Activity {
                 c.save();
                 c.concat(matrix);
                 if(graphData.equals("Kosong")) return;
-                
                 Paint pLine = new Paint(); pLine.setColor(Color.LTGRAY); pLine.setStrokeWidth(3);
                 Paint pNode = new Paint(); pNode.setColor(Color.parseColor("#2196F3")); pNode.setAntiAlias(true);
                 Paint pText = new Paint(); pText.setColor(Color.BLACK); pText.setTextSize(30);
-
                 String[] pairs = graphData.split("\\|");
                 for(String pair : pairs) {
                     String[] pts = pair.split(":");
@@ -197,9 +215,7 @@ public class MainActivity extends Activity {
             @Override public boolean onTouchEvent(MotionEvent ev) {
                 scaleDetector.onTouchEvent(ev);
                 switch (ev.getAction() & MotionEvent.ACTION_MASK) {
-                    case MotionEvent.ACTION_DOWN:
-                        lastX = ev.getX(); lastY = ev.getY();
-                        break;
+                    case MotionEvent.ACTION_DOWN: lastX = ev.getX(); lastY = ev.getY(); break;
                     case MotionEvent.ACTION_MOVE:
                         if(!scaleDetector.isInProgress()) {
                             matrix.postTranslate(ev.getX() - lastX, ev.getY() - lastY);
@@ -216,14 +232,12 @@ public class MainActivity extends Activity {
         ZoomGraphView gv = new ZoomGraphView(this, data);
         gv.setBackgroundColor(Color.WHITE);
         layout.addView(gv);
-
-        Button btnX = new Button(this); btnX.setText("Tutup");
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(250, 150);
+        Button btnX = new Button(this); btnX.setText("X");
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(150, 150);
         lp.gravity = Gravity.TOP | Gravity.RIGHT;
         btnX.setLayoutParams(lp);
         btnX.setOnClickListener(v -> d.dismiss());
         layout.addView(btnX);
-
         d.setContentView(layout);
         d.show();
     }
