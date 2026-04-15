@@ -1,0 +1,70 @@
+image: rust:latest
+
+stages:
+  - build
+
+variables:
+  ANDROID_SDK_ROOT: "/opt/android-sdk"
+  NDK_VERSION: "26.1.10909125" # Sesuaikan jika perlu
+  BUILD_TOOLS_VERSION: "34.0.0"
+
+before_script:
+  - apt-get update && apt-get install -y openjdk-17-jdk wget unzip zip
+  - mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
+  - wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline.zip
+  - unzip cmdline.zip -d $ANDROID_SDK_ROOT/cmdline-tools && mv $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools $ANDROID_SDK_ROOT/cmdline-tools/latest
+  - export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
+  - yes | sdkmanager --licenses
+  - sdkmanager "platforms;android-34" "build-tools;$BUILD_TOOLS_VERSION" "ndk;$NDK_VERSION"
+  - rustup target add aarch64-linux-android
+
+build_apk:
+  stage: build
+  script:
+    # 1. Build Rust Logic
+    - cd rust_logic
+    - NDK_PATH=$ANDROID_SDK_ROOT/ndk/$NDK_VERSION
+    - export TOOLCHAIN=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64
+    - export PATH=$TOOLCHAIN/bin:$PATH
+    - CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android24-clang cargo build --target aarch64-linux-android --release
+    - cd ..
+    - mkdir -p jni
+    - cp rust_logic/target/aarch64-linux-android/release/libxpiz_core.a jni/
+
+    # 2. Build Native Code (NDK)
+    - $ANDROID_SDK_ROOT/ndk/$NDK_VERSION/ndk-build V=1 NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=jni/Android.mk NDK_APPLICATION_MK=jni/Application.mk
+
+    # 3. Compile Java & Create DEX
+    - BUILD_TOOLS_PATH=$ANDROID_SDK_ROOT/build-tools/$BUILD_TOOLS_VERSION
+    - PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
+    - mkdir -p obj/java
+    - javac -d obj/java -cp $PLATFORM_JAR src/com/invuzt/xpiz/MainActivity.java
+    - $BUILD_TOOLS_PATH/d8 --release --lib $PLATFORM_JAR --output . obj/java/com/invuzt/xpiz/*.class
+
+    # 4. Assemble & Sign APK
+    - |
+      echo '<?xml version="1.0" encoding="utf-8"?>
+      <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.invuzt.xpiz">
+          <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34" />
+          <application android:hasCode="true" android:label="xpiz Mobile" android:icon="@mipmap/ic_launcher">
+              <activity android:name=".MainActivity" android:exported="true">
+                  <intent-filter>
+                      <action android:name="android.intent.action.MAIN" />
+                      <category android:name="android.intent.category.LAUNCHER" />
+                  </intent-filter>
+              </activity>
+          </application>
+      </manifest>' > AndroidManifest.xml
+    - if [ ! -d "res" ]; then mkdir -p res/values; echo '<resources></resources>' > res/values/strings.xml; fi
+    - $BUILD_TOOLS_PATH/aapt package -f -M AndroidManifest.xml -S res -I $PLATFORM_JAR -F xpiz-temp.apk
+    - zip -g xpiz-temp.apk classes.dex
+    - mkdir -p lib/arm64-v8a
+    - cp libs/arm64-v8a/libhello.so lib/arm64-v8a/
+    - zip -g xpiz-temp.apk lib/arm64-v8a/libhello.so
+    - keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=xpiz"
+    - $BUILD_TOOLS_PATH/apksigner sign --ks debug.keystore --ks-pass pass:android --out xpiz.apk xpiz-temp.apk
+
+  artifacts:
+    paths:
+      - xpiz.apk
+    expire_in: 1 week
