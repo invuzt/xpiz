@@ -1,6 +1,8 @@
 package co.xpiz.engine;
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.*;
 import android.widget.*;
 import android.graphics.Color;
@@ -9,7 +11,24 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
     static { System.loadLibrary("xpiz_engine"); }
     private native void renderToCanvas(Surface s, String i);
     private Surface cur;
-    private final Object lock = new Object();
+    private boolean isRunning = false;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private String particleCount = "100"; // Default
+
+    // Loop Animasi (FPS control)
+    private final Runnable animationLoop = new Runnable() {
+        @Override
+        public void run() {
+            if (isRunning && cur != null && cur.isValid()) {
+                try {
+                    // Panggil Rust Engine setiap frame
+                    renderToCanvas(cur, particleCount);
+                } catch (Exception e) {}
+                // Jeda 16ms untuk mendapatkan ~60 FPS
+                handler.postDelayed(this, 16); 
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle b) {
@@ -17,29 +36,30 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.parseColor("#121212"));
-        root.setPadding(40, 200, 40, 40);
+        // Status bar safety
+        root.setPadding(40, 220, 40, 40); 
 
         SurfaceView s = new SurfaceView(this);
-        s.setLayoutParams(new LinearLayout.LayoutParams(-1, 800));
+        // Buat view agak besar agar puas lihatnya
+        s.setLayoutParams(new LinearLayout.LayoutParams(-1, 1000)); 
         s.getHolder().addCallback(this);
 
         EditText e = new EditText(this);
-        e.setHint("Input teks..."); e.setTextColor(Color.WHITE);
+        e.setHint("Jumlah partikel (contoh: 1000)");
+        e.setTextColor(Color.WHITE);
+        e.setHintTextColor(Color.GRAY);
+        e.setInputType(android.text.InputType.TYPE_CLASS_NUMBER); // Paksa input angka
 
         Button btn = new Button(this);
-        btn.setText("EKSEKUSI DATA");
+        btn.setText("TERAPKAN & START");
+        
         btn.setOnClickListener(v -> {
-            synchronized(lock) {
-                if(cur != null && cur.isValid()) {
-                    String input = e.getText().toString();
-                    new Thread(() -> {
-                        synchronized(lock) {
-                            if(cur != null && cur.isValid()) {
-                                try { renderToCanvas(cur, input); } catch(Exception ex){}
-                            }
-                        }
-                    }).start();
-                }
+            particleCount = e.getText().toString();
+            if(particleCount.isEmpty()) particleCount = "100";
+            if (!isRunning) {
+                isRunning = true;
+                handler.post(animationLoop); // Start loop
+                btn.setText("UPDATE JUMLAH");
             }
         });
 
@@ -47,7 +67,15 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         setContentView(root);
     }
 
-    public void surfaceCreated(SurfaceHolder h) { synchronized(lock) { cur = h.getSurface(); } }
+    @Override
+    public void surfaceCreated(SurfaceHolder h) { 
+        cur = h.getSurface();
+    }
+    @Override
     public void surfaceChanged(SurfaceHolder h, int f, int w, int h2) {}
-    public void surfaceDestroyed(SurfaceHolder h) { synchronized(lock) { cur = null; } }
+    @Override
+    public void surfaceDestroyed(SurfaceHolder h) { 
+        cur = null; 
+        isRunning = false; // Stop loop agar tidak FC
+    }
 }

@@ -1,4 +1,4 @@
-name: Build xpiz Engine
+name: Build Particle Collider
 on: [push]
 jobs:
   build:
@@ -24,7 +24,7 @@ jobs:
           javac -d obj -cp $PLATFORM_JAR src/co/xpiz/engine/MainActivity.java
           $BUILD_TOOLS/d8 --release --lib $PLATFORM_JAR --output . obj/co/xpiz/engine/*.class
           
-          # Fix: Pastikan folder res diproses benar
+          # Fix: Pastikan res folder ada dan diproses
           $BUILD_TOOLS/aapt package -f -M AndroidManifest.xml -S res -I $PLATFORM_JAR -F xpiz-raw.apk
           
           zip -g xpiz-raw.apk classes.dex
@@ -32,10 +32,10 @@ jobs:
           cp rust_logic/target/aarch64-linux-android/release/libxpiz_engine.so lib/arm64-v8a/
           zip -r xpiz-raw.apk lib/
           $BUILD_TOOLS/zipalign -v 4 xpiz-raw.apk xpiz-final.apk
-          keytool -genkey -v -keystore xpiz.keystore -storepass xpiz99 -alias xpiz -keypass xpiz99 -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=xpiz"
-          $BUILD_TOOLS/apksigner sign --ks xpiz.keystore --ks-pass pass:xpiz99 --out xpiz.apk xpiz-final.apk
+          keytool -genkey -v -keystore xpiz.keystore -storepass xpiz123 -alias xpiz -keypass xpiz123 -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=xpiz"
+          $BUILD_TOOLS/apksigner sign --ks xpiz.keystore --ks-pass pass:xpiz123 --out xpiz.apk xpiz-final.apk
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: xpiz-data-v6
+          name: particle-engine
           path: xpiz.apk
