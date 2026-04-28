@@ -12,7 +12,6 @@ pub extern "C" fn Java_co_xpiz_MainActivity_renderToCanvas(
 ) {
     let text: String = env.get_string(&input).map(|s| s.into()).unwrap_or_default();
     let window = unsafe { ndk_sys::ANativeWindow_fromSurface(env.get_native_interface(), surface) };
-    
     if !window.is_null() {
         unsafe {
             let mut buffer = ndk_sys::ANativeWindow_Buffer {
@@ -20,7 +19,7 @@ pub extern "C" fn Java_co_xpiz_MainActivity_renderToCanvas(
             };
             if ndk_sys::ANativeWindow_lock(window, &mut buffer, ptr::null_mut()) == 0 {
                 let pixels = std::slice::from_raw_parts_mut(buffer.bits as *mut u32, (buffer.stride * buffer.height) as usize);
-                let color = if text.trim().is_empty() { 0xFF212121 } else if text.len() % 2 == 0 { 0xFF388E3C } else { 0xFFD32F2F };
+                let color = if text.len() % 2 == 0 { 0xFF1B5E20 } else { 0xFFB71C1C };
                 for pixel in pixels.iter_mut() { *pixel = color; }
                 ndk_sys::ANativeWindow_unlockAndPost(window);
             }

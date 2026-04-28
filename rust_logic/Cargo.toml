@@ -1,6 +1,6 @@
 [package]
 name = "xpiz_engine"
-version = "2.1.0"
+version = "3.0.0"
 edition = "2021"
 
 [lib]
@@ -11,10 +11,3 @@ crate-type = ["cdylib"]
 jni = "0.21.1"
 ndk = "0.8.0"
 ndk-sys = "0.5.0"
-
-[profile.release]
-opt-level = 3        # Performa maksimal
-lto = "fat"          # Link Time Optimization penuh
-codegen-units = 1
-panic = 'abort'
-strip = false        # Jangan di-strip dulu agar size tidak terlalu kecil/mencurigakan
