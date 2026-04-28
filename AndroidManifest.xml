@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="co.xpiz">
-    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
-    <application android:extractNativeLibs="true" android:hasCode="true" android:label="xpiz" android:theme="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen">
-        <activity android:name=".MainActivity" android:exported="true">
+    <application android:extractNativeLibs="true" android:hasCode="true" android:label="xpiz Stable">
+        <activity android:name=".MainActivity" 
+            android:exported="true"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
