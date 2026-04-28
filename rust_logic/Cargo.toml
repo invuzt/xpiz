@@ -1,6 +1,6 @@
 [package]
 name = "xpiz_engine"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 
 [lib]
@@ -9,4 +9,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 jni = "0.21.1"
-ndk = "0.8.0" # Untuk akses NativeWindow (Canvas)
+ndk = "0.8.0"
+ndk-sys = "0.5.0" # Crate tambahan untuk akses ANativeWindow
