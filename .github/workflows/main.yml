@@ -1,4 +1,4 @@
-name: Build xpiz v6
+name: Build xpiz API 34
 on: [push]
 jobs:
   build:
@@ -18,7 +18,7 @@ jobs:
           RUSTFLAGS="-L $TOOLCHAIN/sysroot/usr/lib/aarch64-linux-android/26" \
           CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android26-clang cargo build --target aarch64-linux-android --release
           cd ..
-          PLATFORM_JAR=$(find $ANDROID_SDK_ROOT/platforms -name "android.jar" | sort -r | head -1)
+          PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
           BUILD_TOOLS=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           mkdir -p obj
           javac -d obj -cp $PLATFORM_JAR src/co/xpiz/engine/MainActivity.java
@@ -29,10 +29,10 @@ jobs:
           cp rust_logic/target/aarch64-linux-android/release/libxpiz_engine.so lib/arm64-v8a/
           zip -r xpiz-raw.apk lib/
           $BUILD_TOOLS/zipalign -v 4 xpiz-raw.apk xpiz-final.apk
-          keytool -genkey -v -keystore final.keystore -storepass xpiz321 -alias xpizkey -keypass xpiz321 -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=xpiz"
-          $BUILD_TOOLS/apksigner sign --ks final.keystore --ks-pass pass:xpiz321 --out xpiz.apk xpiz-final.apk
+          keytool -genkey -v -keystore xpiz.keystore -storepass xpiz99 -alias xpiz -keypass xpiz99 -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=xpiz"
+          $BUILD_TOOLS/apksigner sign --ks xpiz.keystore --ks-pass pass:xpiz99 --out xpiz.apk xpiz-final.apk
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: xpiz-v6-stable
+          name: xpiz-api34
           path: xpiz.apk
