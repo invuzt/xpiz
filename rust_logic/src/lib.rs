@@ -10,9 +10,7 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_calculateNative(
     expression: JString,
     _unused: bool,
 ) -> jstring {
-    let input: String = env.get_string(&expression).expect("Invalid string").into();
-    
-    // Ganti simbol visual ke operator matematika
+    let input: String = env.get_string(&expression).unwrap_or_default().into();
     let sanitized = input.replace("×", "*").replace("÷", "/");
 
     let result = match eval(&sanitized) {
@@ -22,9 +20,9 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_calculateNative(
                 let s = format!("{:.6}", f);
                 s.trim_end_matches('0').trim_end_matches('.').to_string()
             },
-            _ => "0".to_string(),
+            _ => "".to_string(),
         },
-        Err(_) => "".to_string(), // Kosongkan saja kalau belum lengkap ngetiknya
+        Err(_) => "".to_string(),
     };
 
     env.new_string(result).unwrap().into_raw()
