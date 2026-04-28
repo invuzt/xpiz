@@ -1,4 +1,4 @@
-name: Build xpiz Modern
+name: Build xpiz Final
 on: [push]
 jobs:
   build:
@@ -9,31 +9,22 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android
-
-      - name: Build Rust
+      - name: Build
         run: |
           cd rust_logic
           NDK_PATH=$(ls -d $ANDROID_SDK_ROOT/ndk/* | tail -1)
           export TOOLCHAIN=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64
           export PATH=$TOOLCHAIN/bin:$PATH
           RUSTFLAGS="-L $TOOLCHAIN/sysroot/usr/lib/aarch64-linux-android/26" \
-          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android26-clang \
-          cargo build --target aarch64-linux-android --release
-
-      - name: Build Java
-        run: |
+          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android26-clang cargo build --target aarch64-linux-android --release
+          
+          cd ..
           PLATFORM_JAR=$(find $ANDROID_SDK_ROOT/platforms -name "android.jar" | sort -r | head -1)
           BUILD_TOOLS=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           mkdir -p obj
-          javac -d obj -cp $PLATFORM_JAR src/co/xpiz/MainActivity.java
-          $BUILD_TOOLS/d8 --release --lib $PLATFORM_JAR --output . obj/co/xpiz/*.class
-
-      - name: Package & Sign (V2 + V3)
-        run: |
-          PLATFORM_JAR=$(find $ANDROID_SDK_ROOT/platforms -name "android.jar" | sort -r | head -1)
-          BUILD_TOOLS=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
-          mkdir -p res/values
-          echo '<resources></resources>' > res/values/strings.xml
+          javac -d obj -cp $PLATFORM_JAR src/co/xpiz/engine/MainActivity.java
+          $BUILD_TOOLS/d8 --release --lib $PLATFORM_JAR --output . obj/co/xpiz/engine/*.class
+          
           $BUILD_TOOLS/aapt package -f -M AndroidManifest.xml -S res -I $PLATFORM_JAR -F xpiz-raw.apk
           zip -g xpiz-raw.apk classes.dex
           mkdir -p lib/arm64-v8a
@@ -41,12 +32,11 @@ jobs:
           zip -r xpiz-raw.apk lib/
           $BUILD_TOOLS/zipalign -v 4 xpiz-raw.apk xpiz-final.apk
           
-          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=xpiz"
-          # SIGNING WAJIB V2/V3 UNTUK ANDROID 11+
-          $BUILD_TOOLS/apksigner sign --ks debug.keystore --ks-pass pass:android --v2-signing-enabled true --v3-signing-enabled true --out xpiz.apk xpiz-final.apk
-
+          # Gunakan Password Berbeda untuk memicu Signature baru
+          keytool -genkey -v -keystore new.keystore -storepass xpiz123 -alias xpizkey -keypass xpiz123 -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=xpiz"
+          $BUILD_TOOLS/apksigner sign --ks new.keystore --ks-pass pass:xpiz123 --out xpiz.apk xpiz-final.apk
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: xpiz-modern-64bit
+          name: xpiz-final-v5
           path: xpiz.apk
