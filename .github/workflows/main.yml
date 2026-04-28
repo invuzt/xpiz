@@ -1,4 +1,4 @@
-name: Build xpiz.co (Fix Icon & Text)
+name: Build xpiz.co Final
 on: [push]
 jobs:
   build:
@@ -30,37 +30,24 @@ jobs:
           javac -d obj -cp $PLATFORM_JAR src/co/xpiz/MainActivity.java
           $BUILD_TOOLS/d8 --release --lib $PLATFORM_JAR --output . obj/co/xpiz/*.class
 
-      - name: Package APK (Include Resources)
+      - name: Package APK
         run: |
           BUILD_TOOLS=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
           
-          # Manifest dengan Icon
-          echo '<?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="co.xpiz">
-              <application android:hasCode="true" android:label="xpiz.co" android:icon="@mipmap/ic_launcher">
-                  <activity android:name=".MainActivity" android:exported="true">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>' > AndroidManifest.xml
-
-          # AAPT harus menyertakan folder -S res agar icon terbaca
-          if [ ! -d "res" ]; then mkdir -p res/values; echo '<resources></resources>' > res/values/strings.xml; fi
-          
+          # Bungkus Resources
           $BUILD_TOOLS/aapt package -f -M AndroidManifest.xml -S res -I $PLATFORM_JAR -F xpiz-unsigned.apk
           zip -g xpiz-unsigned.apk classes.dex
           
+          # Library Structure
           mkdir -p lib/arm64-v8a lib/armeabi-v7a
           cp rust_logic/target/aarch64-linux-android/release/libxpiz_engine.so lib/arm64-v8a/
           cp rust_logic/target/armv7-linux-androideabi/release/libxpiz_engine.so lib/armeabi-v7a/
           zip -r xpiz-unsigned.apk lib/
           
+          # Signing dengan V1 enabled untuk HP lama
           keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=xpiz"
-          $BUILD_TOOLS/apksigner sign --ks debug.keystore --ks-pass pass:android --out xpiz.apk xpiz-unsigned.apk
+          $BUILD_TOOLS/apksigner sign --v1-signing-enabled true --v2-signing-enabled true --ks debug.keystore --ks-pass pass:android --out xpiz.apk xpiz-unsigned.apk
 
       - name: Upload
         uses: actions/upload-artifact@v4
