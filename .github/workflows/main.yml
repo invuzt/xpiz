@@ -1,4 +1,4 @@
-name: Build xpiz Hybrid Canvas
+name: Build xpiz Hybrid
 on: [push]
 jobs:
   build:
@@ -12,8 +12,6 @@ jobs:
       - name: Build Rust
         run: |
           cd rust_logic
-          # Tambahkan linker args untuk akses library Android Native (android)
-          export RUSTFLAGS="-L $ANDROID_SDK_ROOT/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/24 -l android"
           NDK_PATH=$(ls -d $ANDROID_SDK_ROOT/ndk/* | tail -1)
           export TOOLCHAIN=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64
           export PATH=$TOOLCHAIN/bin:$PATH
@@ -30,17 +28,6 @@ jobs:
         run: |
           BUILD_TOOLS=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
-          echo '<?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="co.xpiz">
-              <application android:hasCode="true" android:label="xpiz Hybrid" android:theme="@android:style/Theme.Black.NoTitleBar">
-                  <activity android:name=".MainActivity" android:exported="true">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>' > AndroidManifest.xml
           $BUILD_TOOLS/aapt package -f -M AndroidManifest.xml -S res -I $PLATFORM_JAR -F xpiz-raw.apk
           zip -g xpiz-raw.apk classes.dex
           mkdir -p lib/arm64-v8a
@@ -52,5 +39,5 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: xpiz-hybrid-canvas
+          name: xpiz-hybrid-final
           path: xpiz.apk

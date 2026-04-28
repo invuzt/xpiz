@@ -12,7 +12,6 @@ pub extern "C" fn Java_co_xpiz_MainActivity_renderToCanvas(
 ) {
     let text: String = env.get_string(&input).map(|s| s.into()).unwrap_or_default();
     
-    // Ambil NativeWindow dari Surface Java menggunakan ndk_sys
     let window = unsafe { 
         ndk_sys::ANativeWindow_fromSurface(env.get_native_interface(), surface) 
     };
@@ -20,31 +19,25 @@ pub extern "C" fn Java_co_xpiz_MainActivity_renderToCanvas(
     if !window.is_null() {
         unsafe {
             let mut buffer = ndk_sys::ANativeWindow_Buffer {
-                width: 0,
-                height: 0,
-                stride: 0,
-                format: 0,
-                bits: ptr::null_mut(),
-                reserved: [0; 6],
+                width: 0, height: 0, stride: 0, format: 0,
+                bits: ptr::null_mut(), reserved: [0; 6],
             };
             
-            // Lock buffer layar
             if ndk_sys::ANativeWindow_lock(window, &mut buffer, ptr::null_mut()) == 0 {
                 let pixels = std::slice::from_raw_parts_mut(
                     buffer.bits as *mut u32,
                     (buffer.stride * buffer.height) as usize
                 );
 
-                // Logika warna: Biru kalau ada teks, Hitam kalau kosong
+                // Warna: Hijau jika genap, Merah jika ganjil (ARGB)
                 let color = if text.trim().is_empty() {
-                    0xFF000000 // Black
+                    0xFF333333 // Abu-abu gelap jika kosong
                 } else if text.len() % 2 == 0 {
-                    0xFF2E7D32 // Green (ARGB)
+                    0xFF2E7D32 // Hijau
                 } else {
-                    0xFFC62828 // Red (ARGB)
+                    0xFFC62828 // Merah
                 };
 
-                // Rust menggambar langsung ke pixel buffer
                 for pixel in pixels.iter_mut() {
                     *pixel = color;
                 }
