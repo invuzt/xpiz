@@ -2,13 +2,18 @@ package co.xpiz;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.widget.*;
 import android.view.*;
+import android.widget.*;
 import android.graphics.Color;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements SurfaceHolder.Callback {
     static { System.loadLibrary("xpiz_engine"); }
-    private native String prosesDataRust(String data);
+    
+    // Fungsi native: Mengirim Surface (Kanvas) dan Teks ke Rust
+    private native void renderToCanvas(Surface surface, String input);
+
+    private Surface currentSurface;
+    private EditText etInput;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -16,34 +21,38 @@ public class MainActivity extends Activity {
         
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(60, 100, 60, 0);
-        root.setBackgroundColor(Color.WHITE);
+        root.setPadding(40, 80, 40, 0);
+        root.setBackgroundColor(Color.DKGRAY);
 
-        // Hasil di atas (Teks normal)
-        TextView tvHasil = new TextView(this);
-        tvHasil.setText("Menunggu input...");
-        tvHasil.setTextSize(20);
-        tvHasil.setTextColor(Color.parseColor("#2E7D32")); // Warna hijau gelap biar bagus
-        tvHasil.setPadding(0, 0, 0, 60);
-        tvHasil.setGravity(Gravity.CENTER);
+        // 1. Kanvas (SurfaceView) - Tempat Rust Menggambar
+        SurfaceView surfaceView = new SurfaceView(this);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, 600);
+        lp.bottomMargin = 40;
+        surfaceView.setLayoutParams(lp);
+        surfaceView.getHolder().addCallback(this);
 
-        EditText etInput = new EditText(this);
-        etInput.setHint("Ketik di sini...");
-        
-        Button btnKirim = new Button(this);
-        btnKirim.setText("Kirim ke Rust");
+        // 2. Input Java
+        etInput = new EditText(this);
+        etInput.setHint("Ketik: Ganjil (Merah) / Genap (Hijau)");
+        etInput.setTextColor(Color.WHITE);
 
-        btnKirim.setOnClickListener(v -> {
-            String input = etInput.getText().toString();
-            if (!input.trim().isEmpty()) {
-                tvHasil.setText(prosesDataRust(input));
+        // 3. Tombol Java
+        Button btn = new Button(this);
+        btn.setText("RENDER DI RUST");
+        btn.setOnClickListener(v -> {
+            if (currentSurface != null) {
+                renderToCanvas(currentSurface, etInput.getText().toString());
             }
         });
 
-        root.addView(tvHasil);
+        root.addView(surfaceView);
         root.addView(etInput);
-        root.addView(btnKirim);
-        
+        root.addView(btn);
         setContentView(root);
     }
+
+    @Override public void surfaceCreated(SurfaceHolder h) { currentSurface = h.getSurface(); }
+    @Override public void surfaceChanged(SurfaceHolder h, int f, int w, int h2) {}
+    @Override public void surfaceDestroyed(SurfaceHolder h) { currentSurface = null; }
 }

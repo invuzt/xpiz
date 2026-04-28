@@ -1,25 +1,24 @@
-name: Build xpiz.co Pro
+name: Build xpiz Hybrid Canvas
 on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android
-
       - name: Build Rust
         run: |
           cd rust_logic
+          # Tambahkan linker args untuk akses library Android Native (android)
+          export RUSTFLAGS="-L $ANDROID_SDK_ROOT/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/24 -l android"
           NDK_PATH=$(ls -d $ANDROID_SDK_ROOT/ndk/* | tail -1)
           export TOOLCHAIN=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64
           export PATH=$TOOLCHAIN/bin:$PATH
           CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android24-clang \
           cargo build --target aarch64-linux-android --release
-
       - name: Build Java
         run: |
           BUILD_TOOLS=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
@@ -27,34 +26,31 @@ jobs:
           mkdir -p obj
           javac -d obj -cp $PLATFORM_JAR src/co/xpiz/MainActivity.java
           $BUILD_TOOLS/d8 --release --lib $PLATFORM_JAR --output . obj/co/xpiz/*.class
-
-      - name: Package & Align APK
+      - name: Package
         run: |
           BUILD_TOOLS=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
-          
-          # Pastikan minimal ada folder res/values
-          mkdir -p res/values res/mipmap-hdpi
-          if [ ! -f "res/values/strings.xml" ]; then
-            echo '<resources><string name="app_name">xpiz.co</string></resources>' > res/values/strings.xml
-          fi
-
-          # 1. Package awal
+          echo '<?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="co.xpiz">
+              <application android:hasCode="true" android:label="xpiz Hybrid" android:theme="@android:style/Theme.Black.NoTitleBar">
+                  <activity android:name=".MainActivity" android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>' > AndroidManifest.xml
           $BUILD_TOOLS/aapt package -f -M AndroidManifest.xml -S res -I $PLATFORM_JAR -F xpiz-raw.apk
           zip -g xpiz-raw.apk classes.dex
           mkdir -p lib/arm64-v8a
           cp rust_logic/target/aarch64-linux-android/release/libxpiz_engine.so lib/arm64-v8a/
           zip -r xpiz-raw.apk lib/
-          
-          # 2. Zipalign
           $BUILD_TOOLS/zipalign -v 4 xpiz-raw.apk xpiz-aligned.apk
-          
-          # 3. Signing
           keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=xpiz"
           $BUILD_TOOLS/apksigner sign --ks debug.keystore --ks-pass pass:android --out xpiz.apk xpiz-aligned.apk
-
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: xpiz-co-pro
+          name: xpiz-hybrid-canvas
           path: xpiz.apk
