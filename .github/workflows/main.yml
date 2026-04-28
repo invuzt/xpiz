@@ -17,13 +17,14 @@ jobs:
           export TOOLCHAIN=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64
           export PATH=$TOOLCHAIN/bin:$PATH
           
-          # Beritahu Rust di mana letak library Android (.so) untuk linker
-          COMMON_FLAGS="-L $TOOLCHAIN/sysroot/usr/lib/aarch64-linux-android/24 -L $TOOLCHAIN/sysroot/usr/lib/arm-linux-androideabi/24"
-          
-          RUSTFLAGS="$COMMON_FLAGS" CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android24-clang \
+          # Build 64-bit (Hanya arahkan ke path aarch64)
+          RUSTFLAGS="-L $TOOLCHAIN/sysroot/usr/lib/aarch64-linux-android/24" \
+          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android24-clang \
           cargo build --target aarch64-linux-android --release
           
-          RUSTFLAGS="$COMMON_FLAGS" CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=armv7a-linux-androideabi24-clang \
+          # Build 32-bit (Hanya arahkan ke path arm-linux-androideabi)
+          RUSTFLAGS="-L $TOOLCHAIN/sysroot/usr/lib/arm-linux-androideabi/24" \
+          CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=armv7a-linux-androideabi24-clang \
           cargo build --target armv7-linux-androideabi --release
 
       - name: Build Java & APK
@@ -35,7 +36,6 @@ jobs:
           javac -d obj -cp $PLATFORM_JAR src/co/xpiz/MainActivity.java
           $BUILD_TOOLS/d8 --release --lib $PLATFORM_JAR --output . obj/co/xpiz/*.class
           
-          # Resources fix
           mkdir -p res/values
           echo '<resources><string name="app_name">xpiz</string></resources>' > res/values/strings.xml
           
@@ -55,5 +55,5 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: xpiz-universal-final
+          name: xpiz-hybrid-v4
           path: xpiz.apk
