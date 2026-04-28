@@ -20,7 +20,7 @@ pub extern "C" fn Java_co_xpiz_MainActivity_renderToCanvas(
             };
             if ndk_sys::ANativeWindow_lock(window, &mut buffer, ptr::null_mut()) == 0 {
                 let pixels = std::slice::from_raw_parts_mut(buffer.bits as *mut u32, (buffer.stride * buffer.height) as usize);
-                let color = if text.trim().is_empty() { 0xFF222222 } else if text.len() % 2 == 0 { 0xFF4CAF50 } else { 0xFFE91E63 };
+                let color = if text.trim().is_empty() { 0xFF212121 } else if text.len() % 2 == 0 { 0xFF388E3C } else { 0xFFD32F2F };
                 for pixel in pixels.iter_mut() { *pixel = color; }
                 ndk_sys::ANativeWindow_unlockAndPost(window);
             }

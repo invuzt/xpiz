@@ -16,18 +16,19 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         super.onCreate(savedInstanceState);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(30, 50, 30, 30);
         root.setBackgroundColor(Color.BLACK);
         
         SurfaceView sv = new SurfaceView(this);
-        sv.setLayoutParams(new LinearLayout.LayoutParams(-1, 800));
+        sv.setLayoutParams(new LinearLayout.LayoutParams(-1, 900));
         sv.getHolder().addCallback(this);
 
         etInput = new EditText(this);
-        etInput.setHint("Ketik...");
+        etInput.setHint("Ketik di sini...");
         etInput.setTextColor(Color.WHITE);
 
         Button btn = new Button(this);
-        btn.setText("RENDER");
+        btn.setText("RENDER RUST");
         btn.setOnClickListener(v -> {
             if (currentSurface != null) renderToCanvas(currentSurface, etInput.getText().toString());
         });

@@ -1,4 +1,4 @@
-name: Build xpiz 64Bit
+name: Build xpiz Heavy
 on: [push]
 jobs:
   build:
@@ -23,20 +23,20 @@ jobs:
           mkdir -p obj
           javac -d obj -cp $PLATFORM_JAR src/co/xpiz/MainActivity.java
           $BUILD_TOOLS/d8 --release --lib $PLATFORM_JAR --output . obj/co/xpiz/*.class
-      - name: Package
+      - name: Package (Force Integrity)
         run: |
           BUILD_TOOLS=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
           $BUILD_TOOLS/aapt package -f -M AndroidManifest.xml -S res -I $PLATFORM_JAR -F xpiz-raw.apk
-          zip -g xpiz-raw.apk classes.dex
+          zip -v -g xpiz-raw.apk classes.dex
           mkdir -p lib/arm64-v8a
           cp rust_logic/target/aarch64-linux-android/release/libxpiz_engine.so lib/arm64-v8a/
-          zip -r xpiz-raw.apk lib/
-          $BUILD_TOOLS/zipalign -v 4 xpiz-raw.apk xpiz-final.apk
+          zip -v -r xpiz-raw.apk lib/
+          $BUILD_TOOLS/zipalign -f -v 4 xpiz-raw.apk xpiz-final.apk
           keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=xpiz"
           $BUILD_TOOLS/apksigner sign --ks debug.keystore --ks-pass pass:android --out xpiz.apk xpiz-final.apk
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: xpiz-64bit
+          name: xpiz-heavy-build
           path: xpiz.apk
