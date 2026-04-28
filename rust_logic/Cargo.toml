@@ -1,6 +1,6 @@
 [package]
 name = "xpiz_engine"
-version = "7.0.0"
+version = "8.1.0"
 edition = "2021"
 
 [lib]
@@ -8,9 +8,7 @@ name = "xpiz_engine"
 crate-type = ["cdylib"]
 
 [dependencies]
-rand = "0.8.5"
 jni = "0.21.1"
 ndk = "0.8.0"
 ndk-sys = "0.5.0"
-# Buat generate angka acak
 rand = "0.8.5"
