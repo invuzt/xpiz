@@ -1,8 +1,7 @@
 [package]
 name = "xpiz_engine"
-version = "3.3.0"
+version = "4.0.0"
 edition = "2021"
-build = "build.rs"
 
 [lib]
 name = "xpiz_engine"
