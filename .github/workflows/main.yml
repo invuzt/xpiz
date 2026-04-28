@@ -1,4 +1,4 @@
-name: Build xpiz Hybrid
+name: Build xpiz 64Bit
 on: [push]
 jobs:
   build:
@@ -15,8 +15,7 @@ jobs:
           NDK_PATH=$(ls -d $ANDROID_SDK_ROOT/ndk/* | tail -1)
           export TOOLCHAIN=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64
           export PATH=$TOOLCHAIN/bin:$PATH
-          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android24-clang \
-          cargo build --target aarch64-linux-android --release
+          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android24-clang cargo build --target aarch64-linux-android --release
       - name: Build Java
         run: |
           BUILD_TOOLS=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
@@ -33,11 +32,11 @@ jobs:
           mkdir -p lib/arm64-v8a
           cp rust_logic/target/aarch64-linux-android/release/libxpiz_engine.so lib/arm64-v8a/
           zip -r xpiz-raw.apk lib/
-          $BUILD_TOOLS/zipalign -v 4 xpiz-raw.apk xpiz-aligned.apk
+          $BUILD_TOOLS/zipalign -v 4 xpiz-raw.apk xpiz-final.apk
           keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=xpiz"
-          $BUILD_TOOLS/apksigner sign --ks debug.keystore --ks-pass pass:android --out xpiz.apk xpiz-aligned.apk
+          $BUILD_TOOLS/apksigner sign --ks debug.keystore --ks-pass pass:android --out xpiz.apk xpiz-final.apk
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: xpiz-hybrid-final
+          name: xpiz-64bit
           path: xpiz.apk

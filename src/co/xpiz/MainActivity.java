@@ -1,5 +1,4 @@
 package co.xpiz;
-
 import android.app.Activity;
 import android.os.Bundle;
 import android.view.*;
@@ -9,39 +8,28 @@ import android.graphics.Color;
 public class MainActivity extends Activity implements SurfaceHolder.Callback {
     static { System.loadLibrary("xpiz_engine"); }
     private native void renderToCanvas(Surface surface, String input);
-
     private Surface currentSurface;
     private EditText etInput;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(50, 80, 50, 50);
-        root.setBackgroundColor(Color.parseColor("#121212"));
-
-        // Canvas Rust (SurfaceView)
+        root.setBackgroundColor(Color.BLACK);
+        
         SurfaceView sv = new SurfaceView(this);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 700);
-        lp.bottomMargin = 50;
-        sv.setLayoutParams(lp);
+        sv.setLayoutParams(new LinearLayout.LayoutParams(-1, 800));
         sv.getHolder().addCallback(this);
 
         etInput = new EditText(this);
-        etInput.setHint("Ketik sesuatu...");
-        etInput.setHintTextColor(Color.GRAY);
+        etInput.setHint("Ketik...");
         etInput.setTextColor(Color.WHITE);
 
         Button btn = new Button(this);
-        btn.setText("RENDER DI RUST");
-
+        btn.setText("RENDER");
         btn.setOnClickListener(v -> {
-            if (currentSurface != null) {
-                renderToCanvas(currentSurface, etInput.getText().toString());
-            }
+            if (currentSurface != null) renderToCanvas(currentSurface, etInput.getText().toString());
         });
 
         root.addView(sv);
@@ -49,8 +37,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         root.addView(btn);
         setContentView(root);
     }
-
-    @Override public void surfaceCreated(SurfaceHolder h) { currentSurface = h.getSurface(); }
-    @Override public void surfaceChanged(SurfaceHolder h, int f, int w, int h2) {}
-    @Override public void surfaceDestroyed(SurfaceHolder h) { currentSurface = null; }
+    public void surfaceCreated(SurfaceHolder h) { currentSurface = h.getSurface(); }
+    public void surfaceChanged(SurfaceHolder h, int f, int w, int h2) {}
+    public void surfaceDestroyed(SurfaceHolder h) { currentSurface = null; }
 }
