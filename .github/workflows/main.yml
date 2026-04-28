@@ -1,4 +1,4 @@
-name: Build xpiz.co Final
+name: Build xpiz.co Pro
 on: [push]
 jobs:
   build:
@@ -9,7 +9,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android, armv7-linux-androideabi
+          targets: aarch64-linux-android
 
       - name: Build Rust
         run: |
@@ -19,8 +19,6 @@ jobs:
           export PATH=$TOOLCHAIN/bin:$PATH
           CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android24-clang \
           cargo build --target aarch64-linux-android --release
-          CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=armv7a-linux-androideabi24-clang \
-          cargo build --target armv7-linux-androideabi --release
 
       - name: Build Java
         run: |
@@ -30,27 +28,27 @@ jobs:
           javac -d obj -cp $PLATFORM_JAR src/co/xpiz/MainActivity.java
           $BUILD_TOOLS/d8 --release --lib $PLATFORM_JAR --output . obj/co/xpiz/*.class
 
-      - name: Package APK
+      - name: Package & Align APK
         run: |
           BUILD_TOOLS=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
           
-          # Bungkus Resources
-          $BUILD_TOOLS/aapt package -f -M AndroidManifest.xml -S res -I $PLATFORM_JAR -F xpiz-unsigned.apk
-          zip -g xpiz-unsigned.apk classes.dex
-          
-          # Library Structure
-          mkdir -p lib/arm64-v8a lib/armeabi-v7a
+          # 1. Package awal
+          $BUILD_TOOLS/aapt package -f -M AndroidManifest.xml -S res -I $PLATFORM_JAR -F xpiz-raw.apk
+          zip -g xpiz-raw.apk classes.dex
+          mkdir -p lib/arm64-v8a
           cp rust_logic/target/aarch64-linux-android/release/libxpiz_engine.so lib/arm64-v8a/
-          cp rust_logic/target/armv7-linux-androideabi/release/libxpiz_engine.so lib/armeabi-v7a/
-          zip -r xpiz-unsigned.apk lib/
+          zip -r xpiz-raw.apk lib/
           
-          # Signing dengan V1 enabled untuk HP lama
+          # 2. Zipalign (Wajib untuk HP canggih/baru agar APK optimal)
+          $BUILD_TOOLS/zipalign -v 4 xpiz-raw.apk xpiz-aligned.apk
+          
+          # 3. Signing Final (V2 & V3 signing aktif)
           keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=xpiz"
-          $BUILD_TOOLS/apksigner sign --v1-signing-enabled true --v2-signing-enabled true --ks debug.keystore --ks-pass pass:android --out xpiz.apk xpiz-unsigned.apk
+          $BUILD_TOOLS/apksigner sign --ks debug.keystore --ks-pass pass:android --out xpiz.apk xpiz-aligned.apk
 
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: xpiz-co-final
+          name: xpiz-co-pro
           path: xpiz.apk
