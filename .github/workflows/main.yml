@@ -1,4 +1,4 @@
-name: Build xpiz Mobile (No-C Direct JNI)
+name: Build xpiz (Direct JNI)
 
 on: [push]
 
@@ -19,7 +19,6 @@ jobs:
           NDK_PATH=$(ls -d $ANDROID_SDK_ROOT/ndk/* | tail -1)
           export TOOLCHAIN=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64
           export PATH=$TOOLCHAIN/bin:$PATH
-          # Kompilasi langsung ke .so
           CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android24-clang \
           cargo build --target aarch64-linux-android --release
 
@@ -36,7 +35,6 @@ jobs:
           BUILD_TOOLS_PATH=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
           
-          # Manifest
           echo '<?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.invuzt.xpiz">
               <application android:hasCode="true" android:label="xpiz Mobile">
@@ -49,19 +47,19 @@ jobs:
               </application>
           </manifest>' > AndroidManifest.xml
 
-          $BUILD_TOOLS_PATH/aapt package -f -M AndroidManifest.xml -I $PLATFORM_JAR -F xpiz-temp.apk
-          zip -g xpiz-temp.apk classes.dex
+          $BUILD_TOOLS_PATH/aapt package -f -M AndroidManifest.xml -I $PLATFORM_JAR -F xpiz-unsigned.apk
+          zip -g xpiz-unsigned.apk classes.dex
           
-          # Masukkan file .so hasil Cargo langsung ke APK
+          # PENTING: Struktur folder harus 'lib/arm64-v8a/' agar terbaca sistem
           mkdir -p lib/arm64-v8a
           cp rust_logic/target/aarch64-linux-android/release/libxpiz_core.so lib/arm64-v8a/
-          zip -r xpiz-temp.apk lib/
+          zip -r xpiz-unsigned.apk lib/
           
           keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=xpiz"
-          $BUILD_TOOLS_PATH/apksigner sign --ks debug.keystore --ks-pass pass:android --out xpiz.apk xpiz-temp.apk
+          $BUILD_TOOLS_PATH/apksigner sign --ks debug.keystore --ks-pass pass:android --out xpiz.apk xpiz-unsigned.apk
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: xpiz-NoC-Build
+          name: xpiz-Direct-Build
           path: xpiz.apk

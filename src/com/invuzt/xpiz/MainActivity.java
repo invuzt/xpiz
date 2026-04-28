@@ -7,7 +7,6 @@ import android.view.Gravity;
 import android.widget.*;
 
 public class MainActivity extends Activity {
-    // Nama library sesuai dengan [lib] name di Cargo.toml
     static { System.loadLibrary("xpiz_core"); }
     private native String calculateNative(String expression);
 
@@ -22,7 +21,6 @@ public class MainActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.parseColor("#F5F5F5"));
 
-        // Display
         tvDisplayExp = new TextView(this);
         tvDisplayExp.setTextSize(20);
         tvDisplayExp.setPadding(40, 80, 40, 0);
@@ -38,7 +36,6 @@ public class MainActivity extends Activity {
         root.addView(tvDisplayExp);
         root.addView(tvDisplayResult);
 
-        // Buttons
         GridLayout grid = new GridLayout(this);
         grid.setColumnCount(4);
         String[] buttons = {"C", "(", ")", "/", "7", "8", "9", "*", "4", "5", "6", "-", "1", "2", "3", "+", "0", ".", "DEL", "="};
