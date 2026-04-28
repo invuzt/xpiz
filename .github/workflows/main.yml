@@ -1,4 +1,4 @@
-name: Build Murni Rust Java
+name: Build xpiz.co Murni
 on: [push]
 jobs:
   build:
@@ -9,24 +9,30 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android
+          targets: aarch64-linux-android, armv7-linux-androideabi
 
-      - name: Build Rust
+      - name: Build Rust (64-bit & 32-bit)
         run: |
           cd rust_logic
           NDK_PATH=$(ls -d $ANDROID_SDK_ROOT/ndk/* | tail -1)
           export TOOLCHAIN=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64
           export PATH=$TOOLCHAIN/bin:$PATH
+          
+          # Build ARM64
           CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android24-clang \
           cargo build --target aarch64-linux-android --release
+          
+          # Build ARMv7 (Untuk kompatibilitas maksimal)
+          CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=armv7a-linux-androideabi24-clang \
+          cargo build --target armv7-linux-androideabi --release
 
       - name: Build Java
         run: |
           BUILD_TOOLS=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
           mkdir -p obj
-          javac -d obj -cp $PLATFORM_JAR src/com/invuzt/xpiz/MainActivity.java
-          $BUILD_TOOLS/d8 --release --lib $PLATFORM_JAR --output . obj/com/invuzt/xpiz/*.class
+          javac -d obj -cp $PLATFORM_JAR src/co/xpiz/MainActivity.java
+          $BUILD_TOOLS/d8 --release --lib $PLATFORM_JAR --output . obj/co/xpiz/*.class
 
       - name: Package APK
         run: |
@@ -34,8 +40,9 @@ jobs:
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
           
           echo '<?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.invuzt.xpiz">
-              <application android:hasCode="true" android:label="xpiz Murni">
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="co.xpiz">
+              <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34" />
+              <application android:hasCode="true" android:label="xpiz.co">
                   <activity android:name=".MainActivity" android:exported="true">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
@@ -48,9 +55,10 @@ jobs:
           $BUILD_TOOLS/aapt package -f -M AndroidManifest.xml -I $PLATFORM_JAR -F xpiz-unsigned.apk
           zip -g xpiz-unsigned.apk classes.dex
           
-          # Folder library harus tepat: lib/arm64-v8a/
-          mkdir -p lib/arm64-v8a
-          cp rust_logic/target/aarch64-linux-android/release/libxpiz_rust.so lib/arm64-v8a/
+          # Masukkan kedua arsitektur agar "Kompatibel" di semua HP
+          mkdir -p lib/arm64-v8a lib/armeabi-v7a
+          cp rust_logic/target/aarch64-linux-android/release/libxpiz_engine.so lib/arm64-v8a/
+          cp rust_logic/target/armv7-linux-androideabi/release/libxpiz_engine.so lib/armeabi-v7a/
           zip -r xpiz-unsigned.apk lib/
           
           keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=xpiz"
@@ -59,5 +67,5 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: xpiz-Murni
+          name: xpiz-co-build
           path: xpiz.apk

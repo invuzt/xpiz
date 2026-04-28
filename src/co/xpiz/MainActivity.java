@@ -1,4 +1,4 @@
-package com.invuzt.xpiz;
+package co.xpiz;
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -8,24 +8,22 @@ import android.graphics.Color;
 
 public class MainActivity extends Activity {
     static {
-        // Nama harus sesuai dengan [lib] name di Cargo.toml
-        System.loadLibrary("xpiz_rust");
+        System.loadLibrary("xpiz_engine");
     }
 
-    private native String helloRust(String name);
+    private native String getMsg(String name);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
         TextView tv = new TextView(this);
-        tv.setTextSize(24);
+        tv.setTextSize(26);
         tv.setGravity(Gravity.CENTER);
-        tv.setTextColor(Color.BLACK);
+        tv.setTextColor(Color.BLUE);
         
-        // Panggil fungsi Rust
-        String pesanDariRust = helloRust("User");
-        tv.setText(pesanDariRust);
+        // Panggil Rust
+        tv.setText(getMsg("Sistem"));
         
         setContentView(tv);
     }

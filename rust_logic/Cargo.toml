@@ -1,10 +1,10 @@
 [package]
-name = "xpiz_rust"
-version = "0.1.0"
+name = "xpiz_engine"
+version = "1.0.0"
 edition = "2021"
 
 [lib]
-name = "xpiz_rust"
+name = "xpiz_engine"
 crate-type = ["cdylib"]
 
 [dependencies]
