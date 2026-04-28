@@ -33,6 +33,12 @@ jobs:
           BUILD_TOOLS=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
           
+          # Pastikan minimal ada folder res/values
+          mkdir -p res/values res/mipmap-hdpi
+          if [ ! -f "res/values/strings.xml" ]; then
+            echo '<resources><string name="app_name">xpiz.co</string></resources>' > res/values/strings.xml
+          fi
+
           # 1. Package awal
           $BUILD_TOOLS/aapt package -f -M AndroidManifest.xml -S res -I $PLATFORM_JAR -F xpiz-raw.apk
           zip -g xpiz-raw.apk classes.dex
@@ -40,10 +46,10 @@ jobs:
           cp rust_logic/target/aarch64-linux-android/release/libxpiz_engine.so lib/arm64-v8a/
           zip -r xpiz-raw.apk lib/
           
-          # 2. Zipalign (Wajib untuk HP canggih/baru agar APK optimal)
+          # 2. Zipalign
           $BUILD_TOOLS/zipalign -v 4 xpiz-raw.apk xpiz-aligned.apk
           
-          # 3. Signing Final (V2 & V3 signing aktif)
+          # 3. Signing
           keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=xpiz"
           $BUILD_TOOLS/apksigner sign --ks debug.keystore --ks-pass pass:android --out xpiz.apk xpiz-aligned.apk
 
