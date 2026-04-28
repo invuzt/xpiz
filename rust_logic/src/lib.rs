@@ -10,7 +10,12 @@ pub extern "C" fn Java_com_invuzt_xpiz_MainActivity_calculateNative(
     expression: JString,
     _unused: bool,
 ) -> jstring {
-    let input: String = env.get_string(&expression).unwrap_or_default().into();
+    // Ambil string dari Java, jika gagal buat string kosong
+    let input: String = match env.get_string(&expression) {
+        Ok(s) => s.into(),
+        Err(_) => String::new(),
+    };
+
     let sanitized = input.replace("×", "*").replace("÷", "/");
 
     let result = match eval(&sanitized) {
