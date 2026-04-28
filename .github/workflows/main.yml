@@ -1,4 +1,4 @@
-name: Build xpiz API 34
+name: Build xpiz Engine
 on: [push]
 jobs:
   build:
@@ -23,7 +23,10 @@ jobs:
           mkdir -p obj
           javac -d obj -cp $PLATFORM_JAR src/co/xpiz/engine/MainActivity.java
           $BUILD_TOOLS/d8 --release --lib $PLATFORM_JAR --output . obj/co/xpiz/engine/*.class
+          
+          # Fix: Pastikan folder res diproses benar
           $BUILD_TOOLS/aapt package -f -M AndroidManifest.xml -S res -I $PLATFORM_JAR -F xpiz-raw.apk
+          
           zip -g xpiz-raw.apk classes.dex
           mkdir -p lib/arm64-v8a
           cp rust_logic/target/aarch64-linux-android/release/libxpiz_engine.so lib/arm64-v8a/
@@ -34,5 +37,5 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: xpiz-api34
+          name: xpiz-data-v6
           path: xpiz.apk
