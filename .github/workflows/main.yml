@@ -9,41 +9,44 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android, armv7-linux-androideabi
+
       - name: Build Rust
         run: |
           cd rust_logic
           NDK_PATH=$(ls -d $ANDROID_SDK_ROOT/ndk/* | tail -1)
           export TOOLCHAIN=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64
           export PATH=$TOOLCHAIN/bin:$PATH
-          # Build 64-bit
-          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android24-clang cargo build --target aarch64-linux-android --release
-          # Build 32-bit
-          CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=armv7a-linux-androideabi24-clang cargo build --target armv7-linux-androideabi --release
-      - name: Build Java
+          cargo build --target aarch64-linux-android --release
+          cargo build --target armv7-linux-androideabi --release
+
+      - name: Build Java & APK
         run: |
+          # Cari Android Jar secara dinamis (biar nggak error package not found)
+          PLATFORM_JAR=$(find $ANDROID_SDK_ROOT/platforms -name "android.jar" | sort -r | head -1)
           BUILD_TOOLS=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
-          PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-33/android.jar
+          
+          echo "Using Platform Jar: $PLATFORM_JAR"
+          
           mkdir -p obj
           javac -d obj -cp $PLATFORM_JAR src/co/xpiz/MainActivity.java
           $BUILD_TOOLS/d8 --release --lib $PLATFORM_JAR --output . obj/co/xpiz/*.class
-      - name: Package
-        run: |
-          BUILD_TOOLS=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
-          PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-33/android.jar
-          mkdir -p res/values
-          echo '<resources></resources>' > res/values/strings.xml
+          
+          # Packaging
           $BUILD_TOOLS/aapt package -f -M AndroidManifest.xml -S res -I $PLATFORM_JAR -F xpiz-raw.apk
           zip -g xpiz-raw.apk classes.dex
-          # Masukkan kedua arsitektur agar sistem tidak menolak
+          
           mkdir -p lib/arm64-v8a lib/armeabi-v7a
           cp rust_logic/target/aarch64-linux-android/release/libxpiz_engine.so lib/arm64-v8a/
           cp rust_logic/target/armv7-linux-androideabi/release/libxpiz_engine.so lib/armeabi-v7a/
           zip -r xpiz-raw.apk lib/
+          
           $BUILD_TOOLS/zipalign -v 4 xpiz-raw.apk xpiz-final.apk
+          
           keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=xpiz"
           $BUILD_TOOLS/apksigner sign --ks debug.keystore --ks-pass pass:android --out xpiz.apk xpiz-final.apk
+
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: xpiz-universal
+          name: xpiz-universal-v3
           path: xpiz.apk
