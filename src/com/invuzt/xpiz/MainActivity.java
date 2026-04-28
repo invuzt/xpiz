@@ -23,7 +23,6 @@ public class MainActivity extends Activity {
         root.setBackgroundColor(Color.WHITE);
         root.setPadding(20, 20, 20, 20);
 
-        // DISPLAY AREA
         LinearLayout displayArea = new LinearLayout(this);
         displayArea.setOrientation(LinearLayout.VERTICAL);
         displayArea.setPadding(30, 80, 30, 60);
@@ -45,7 +44,6 @@ public class MainActivity extends Activity {
         displayArea.addView(tvDisplayExp);
         root.addView(displayArea);
 
-        // GRID TOMBOL
         GridLayout grid = new GridLayout(this);
         grid.setColumnCount(4);
 
