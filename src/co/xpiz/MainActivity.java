@@ -16,36 +16,33 @@ public class MainActivity extends Activity {
         
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(60, 120, 60, 0);
+        root.setPadding(60, 100, 60, 0);
+        root.setBackgroundColor(Color.WHITE);
 
-        // 1. Output dari Rust (Sekarang di paling atas)
+        // Hasil di atas (Teks normal)
         TextView tvHasil = new TextView(this);
-        tvHasil.setText("Hasil akan muncul di sini");
-        tvHasil.setTextSize(22);
-        tvHasil.setTextColor(Color.BLUE);
-        tvHasil.setPadding(0, 0, 0, 50);
+        tvHasil.setText("Menunggu input...");
+        tvHasil.setTextSize(20);
+        tvHasil.setTextColor(Color.parseColor("#2E7D32")); // Warna hijau gelap biar bagus
+        tvHasil.setPadding(0, 0, 0, 60);
         tvHasil.setGravity(Gravity.CENTER);
 
-        // 2. Input Teks
         EditText etInput = new EditText(this);
-        etInput.setHint("Ketik sesuatu untuk Rust...");
+        etInput.setHint("Ketik di sini...");
         
-        // 3. Tombol Eksekusi
         Button btnKirim = new Button(this);
-        btnKirim.setText("KIRIM KE RUST");
+        btnKirim.setText("Kirim ke Rust");
 
         btnKirim.setOnClickListener(v -> {
             String input = etInput.getText().toString();
-            if (!input.isEmpty()) {
-                String hasil = prosesDataRust(input);
-                tvHasil.setText(hasil);
+            if (!input.trim().isEmpty()) {
+                tvHasil.setText(prosesDataRust(input));
             }
         });
 
-        // Susun UI sesuai urutan permintaan
-        root.addView(tvHasil);  // Hasil di atas
-        root.addView(etInput);  // Input di tengah
-        root.addView(btnKirim); // Tombol di bawah
+        root.addView(tvHasil);
+        root.addView(etInput);
+        root.addView(btnKirim);
         
         setContentView(root);
     }

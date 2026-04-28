@@ -1,4 +1,4 @@
-name: Build xpiz.co Murni
+name: Build xpiz.co (Fix Icon & Text)
 on: [push]
 jobs:
   build:
@@ -11,18 +11,14 @@ jobs:
         with:
           targets: aarch64-linux-android, armv7-linux-androideabi
 
-      - name: Build Rust (64-bit & 32-bit)
+      - name: Build Rust
         run: |
           cd rust_logic
           NDK_PATH=$(ls -d $ANDROID_SDK_ROOT/ndk/* | tail -1)
           export TOOLCHAIN=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64
           export PATH=$TOOLCHAIN/bin:$PATH
-          
-          # Build ARM64
           CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android24-clang \
           cargo build --target aarch64-linux-android --release
-          
-          # Build ARMv7 (Untuk kompatibilitas maksimal)
           CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=armv7a-linux-androideabi24-clang \
           cargo build --target armv7-linux-androideabi --release
 
@@ -34,15 +30,15 @@ jobs:
           javac -d obj -cp $PLATFORM_JAR src/co/xpiz/MainActivity.java
           $BUILD_TOOLS/d8 --release --lib $PLATFORM_JAR --output . obj/co/xpiz/*.class
 
-      - name: Package APK
+      - name: Package APK (Include Resources)
         run: |
           BUILD_TOOLS=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | tail -1)
           PLATFORM_JAR=$ANDROID_SDK_ROOT/platforms/android-34/android.jar
           
+          # Manifest dengan Icon
           echo '<?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="co.xpiz">
-              <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34" />
-              <application android:hasCode="true" android:label="xpiz.co">
+              <application android:hasCode="true" android:label="xpiz.co" android:icon="@mipmap/ic_launcher">
                   <activity android:name=".MainActivity" android:exported="true">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
@@ -52,10 +48,12 @@ jobs:
               </application>
           </manifest>' > AndroidManifest.xml
 
-          $BUILD_TOOLS/aapt package -f -M AndroidManifest.xml -I $PLATFORM_JAR -F xpiz-unsigned.apk
+          # AAPT harus menyertakan folder -S res agar icon terbaca
+          if [ ! -d "res" ]; then mkdir -p res/values; echo '<resources></resources>' > res/values/strings.xml; fi
+          
+          $BUILD_TOOLS/aapt package -f -M AndroidManifest.xml -S res -I $PLATFORM_JAR -F xpiz-unsigned.apk
           zip -g xpiz-unsigned.apk classes.dex
           
-          # Masukkan kedua arsitektur agar "Kompatibel" di semua HP
           mkdir -p lib/arm64-v8a lib/armeabi-v7a
           cp rust_logic/target/aarch64-linux-android/release/libxpiz_engine.so lib/arm64-v8a/
           cp rust_logic/target/armv7-linux-androideabi/release/libxpiz_engine.so lib/armeabi-v7a/
@@ -67,5 +65,5 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: xpiz-co-build
+          name: xpiz-co-final
           path: xpiz.apk
